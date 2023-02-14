@@ -42,9 +42,9 @@ public abstract class MetastoreConnector
     
     public abstract List<String> listTables(String namespace) throws Exception;
         
-    public abstract void createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception;
+    public abstract boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception;
     
-    public abstract void dropTable() throws Exception;
+    public abstract boolean dropTable() throws Exception;
     
     public abstract List<List<String>> readTable() throws Exception, UnsupportedEncodingException;
 
@@ -60,19 +60,19 @@ public abstract class MetastoreConnector
     
     public abstract String writeTable(String record, String outputFile) throws Exception, UnsupportedEncodingException;
     
-    public abstract void commitTable(String dataFileName) throws Exception;
+    public abstract boolean commitTable(String dataFileName) throws Exception;
 
     public abstract Schema getTableSchema();
     
     public abstract List<Namespace> listNamespaces() throws Exception;
     
-    public abstract void createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException;
+    public abstract boolean createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException;
     
     public abstract boolean dropNamespace(Namespace namespace) throws Exception, NamespaceNotEmptyException;
     
     public abstract java.util.Map<java.lang.String,java.lang.String> loadNamespaceMetadata(Namespace namespace) throws Exception, NoSuchNamespaceException;
     
-    public abstract void renameTable(TableIdentifier from, TableIdentifier to) throws Exception, NoSuchTableException, AlreadyExistsException;
+    public abstract boolean renameTable(TableIdentifier from, TableIdentifier to) throws Exception, NoSuchTableException, AlreadyExistsException;
     
     public abstract PartitionSpec getSpec() throws Exception;
     

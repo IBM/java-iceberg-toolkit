@@ -192,10 +192,12 @@ public class DataConversion
      * Represent metadata of plan files as comma delimited values
      * @param planFileTasks
      */
-    public static void dataFilesAsCsv(Map<Integer, List<FileScanTask>> planFileTasks) {
-        System.out.println("TOTAL TASKS: " + planFileTasks.size());
+    public static String dataFilesAsCsv(Map<Integer, List<FileScanTask>> planFileTasks) {
+        StringBuilder builder = new StringBuilder();
+        
+        builder.append(String.format("TOTAL TASKS: %d\n", planFileTasks.size()));
         for (Map.Entry<Integer, List<FileScanTask>> entry : planFileTasks.entrySet()) {
-            System.out.println(String.format("TOTAL FILES IN TASK %d : %d", entry.getKey(),entry.getValue().size()));
+            builder.append(String.format("TOTAL FILES IN TASK %d : %d\n", entry.getKey(),entry.getValue().size()));
             for (FileScanTask task : entry.getValue()) {
                 DataFile file = task.file();
                 String taskInfo = String.format("%s,%s,%s,%d,%d,%s,%s", 
@@ -207,16 +209,18 @@ public class DataConversion
                                                 task.spec(),
                                                 task.residual()
                                                 );
-                System.out.println(taskInfo);
+                builder.append(String.format("%s\n", taskInfo));
             }
         }
+        
+        return builder.toString();
     }
     
     /**
      * Represent a snapshot metadata as comma delimited values
      * @param snapshot
      */
-    public static void snapshotAsCsv(Snapshot snapshot) {
+    public static String snapshotAsCsv(Snapshot snapshot) {
         String snapshotInfo = 
             String.format("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d",
                         snapshot.snapshotId(),
@@ -234,17 +238,18 @@ public class DataConversion
                         snapshot.manifestListLocation(),
                         snapshot.schemaId()
                         );
-        System.out.println(snapshotInfo);
+        return snapshotInfo;
     }
     
     /**
      * Represent snapshots information as comma delimited values
      * @param snapshots
      */
-    public static void snapshotsAsCsv(java.lang.Iterable<Snapshot> snapshots) {
+    public static String snapshotsAsCsv(java.lang.Iterable<Snapshot> snapshots) {
+        StringBuilder builder = new StringBuilder();
         for (Snapshot snapshot : snapshots) {
             String snapshotInfo = 
-                String.format("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d", 
+                String.format("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d\n", 
                             snapshot.snapshotId(),
                             snapshot.timestampMillis(),
                             snapshot.operation(),
@@ -260,15 +265,19 @@ public class DataConversion
                             snapshot.manifestListLocation(),
                             snapshot.schemaId()
                             );
-            System.out.println(snapshotInfo);
+            builder.append(snapshotInfo);
         }
+        
+        return builder.toString();
     }
     
     /**
      * Represent a schema with comma delimited string for each of its columns
      * @param schema
      */
-    public static void schemaAsCsv(Schema schema) {
+    public static String schemaAsCsv(Schema schema) {
+        StringBuilder builder = new StringBuilder();
+        
         List<Types.NestedField> columns = schema.columns();
         for (Types.NestedField col : columns) {
             Type colType = col.type();
@@ -328,9 +337,11 @@ public class DataConversion
                     throw new IllegalArgumentException("Unsupported column type");
             }
             
-            String columnInfo = String.format("%d,%s,%s,%d,%d,%b", col.fieldId(), col.name(), type, precision, scale, col.isRequired());
-            System.out.println(columnInfo);
+            String columnInfo = String.format("%d,%s,%s,%d,%d,%b\n", col.fieldId(), col.name(), type, precision, scale, col.isRequired());
+            builder.append(columnInfo);
         }
+        
+        return builder.toString();
     }
     
 }
