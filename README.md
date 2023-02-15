@@ -14,16 +14,17 @@ java-iceberg-toolkit is a Java implementation for performing operations on Apach
 
 ### CLI
 
-1. Java version 13 and above 
+1. Java version 8 and above
 2. Apache Maven Dependencies 
 3. AWS Credentials set as environment variables 
 
 ### Testing
 
-1. JUnit5
-2. AWS Credentials set as environment variable 
-3. URI set as "URI" environment variable 
-4. Warehouse set as "WAREHOUSE" environment variable
+1. Java version 13 and above
+2. JUnit5
+3. AWS Credentials set as environment variable
+4. URI set as "URI" environment variable
+5. Warehouse set as "WAREHOUSE" environment variable
 
 ## Limitations
 
@@ -95,7 +96,7 @@ If URI and WAREHOUSE are not set as environment variables, the test will promp y
 
 ## CLI
 
-java-iceberg-toolkit comes with a CLI available, ready to use when the code is packaged and all configurations are in place.
+java-iceberg-toolkit comes with a CLI which is ready to use when the code is packaged and all configurations are in place.
 
 ### Quickstart
 
