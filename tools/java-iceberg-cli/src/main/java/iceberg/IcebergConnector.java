@@ -130,7 +130,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public boolean dropTable() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Dropping the table " + m_tableIdentifier);
         if (m_catalog.dropTable(m_tableIdentifier)) {
@@ -141,7 +142,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public List<List<String>> readTable() throws UnsupportedEncodingException {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         // Get records
         System.out.println("Records in " + m_tableIdentifier + " :");
@@ -161,7 +163,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public Map<Integer, List<Map<String, String>>> getPlanFiles() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         TableScan scan = iceberg_table.newScan();
         Iterable<CombinedScanTask> scanTasks = scan.planTasks();
@@ -224,7 +227,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String getTableLocation() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         String tableLocation = iceberg_table.location();
         
@@ -235,7 +239,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public String getTableDataLocation() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         LocationProvider provider = iceberg_table.locationProvider();
         String dataLocation = provider.newDataLocation("");
@@ -247,7 +252,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public PartitionSpec getSpec() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         PartitionSpec spec = iceberg_table.spec();
         
@@ -255,13 +261,15 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String getUUID() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         TableMetadata metadata = ((HasTableOperations) iceberg_table).operations().current();
         return metadata.uuid();
     }
          
     public Snapshot getCurrentSnapshot() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         Snapshot snapshot = iceberg_table.currentSnapshot();
         
@@ -269,7 +277,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         java.lang.Iterable<Snapshot> snapshots = iceberg_table.snapshots();
         
@@ -277,7 +286,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String writeTable(String records, String outputFile) throws IOException {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Writing to the table " + m_tableIdentifier);
         
@@ -368,7 +378,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public boolean commitTable(String dataFiles) {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Commiting to the table " + m_tableIdentifier);
         
@@ -426,7 +437,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public Schema getTableSchema() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         return iceberg_table.schema();
     }
     
