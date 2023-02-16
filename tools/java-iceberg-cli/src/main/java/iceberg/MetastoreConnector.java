@@ -56,6 +56,8 @@ public abstract class MetastoreConnector
     public abstract String getTableDataLocation() throws Exception;
     
     public abstract Snapshot getCurrentSnapshot() throws Exception;
+    
+    public abstract Long currentSnapshotId() throws Exception;
 
     public abstract Iterable<Snapshot> getListOfSnapshots() throws Exception;
     

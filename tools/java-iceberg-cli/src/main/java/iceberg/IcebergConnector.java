@@ -284,10 +284,14 @@ public class IcebergConnector extends MetastoreConnector
          
     public Snapshot getCurrentSnapshot() {
         loadTable();
-
-        Snapshot snapshot = m_scan.snapshot();
         
-        return snapshot;
+        return m_scan.snapshot();
+    }
+    
+    public Long currentSnapshotId() {
+        loadTable();
+        
+        return m_scan.snapshot().snapshotId();
     }
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
