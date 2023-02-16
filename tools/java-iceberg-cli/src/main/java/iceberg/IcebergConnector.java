@@ -70,7 +70,7 @@ public class IcebergConnector extends MetastoreConnector
         super(metastoreUri, warehouse, namespace, tableName);
         initCatalog(metastoreUri, warehouse);
         if (tableName != null)
-            initTableIdentifier(namespace, tableName);
+            setTableIdentifier(namespace, tableName);
     }
     
     private void initCatalog(String metastoreUri, String warehouse) {
@@ -87,15 +87,12 @@ public class IcebergConnector extends MetastoreConnector
         // Set properties
         Map <String, String> properties = new HashMap<String, String>();
         properties.put("uri", metastoreUri);
+        properties.put("list-all-tables", "true");
         if (warehouse != null)
             properties.put("warehouse", warehouse);
         
         // Initialize Hive catalog
         m_catalog.initialize("hive", properties);
-    }
-    
-    private void initTableIdentifier(String namespace, String tableName) {
-        m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
     
     public void setTableIdentifier(String namespace, String tableName) {
@@ -191,12 +188,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public java.util.List<String> listTables(String namespace) {
-        List<TableIdentifier> table_list = m_catalog.listTables(Namespace.of(namespace));
-        List<String> table_list_return = new ArrayList<String>();
-        for (TableIdentifier table : table_list) {
-            table_list_return.add(table.toString());
-        }
-        return table_list_return;
+        List<TableIdentifier> tables = m_catalog.listTables(Namespace.of(namespace));
+        return tables.stream().map(TableIdentifier::name).toList();
     }
     
     public java.util.List<Namespace> listNamespaces() {
