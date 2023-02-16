@@ -89,10 +89,10 @@ public class IcebergApplication {
                 output = printUtils.printTables(namespace);
             else {
                 boolean fetchAll = parser.fetchAll();
-                    if (fetchAll)
-                        output = printUtils.printAllTables();
-                    else
-                        output = printUtils.printNamespaces();
+                if (fetchAll)
+                    output = printUtils.printAllTables();
+                else
+                    output = printUtils.printNamespaces();
             }
             break;
         case "location":
