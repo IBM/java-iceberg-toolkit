@@ -95,6 +95,9 @@ public class IcebergApplication {
                         output = printUtils.printNamespaces();
             }
             break;
+        case "location":
+            output = connector.getTableLocation();
+            break;
         case "files":
             output = printUtils.printFiles();
             break;

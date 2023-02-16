@@ -106,6 +106,11 @@ public class Parser {
         list.addArgument("identifier", "Table or namespace identifier");
         m_commands.put("list", list);
         
+        Command location = new Command("location", "Fetch table location");
+        location.addOption("--help", "Show this help message and exit");
+        location.addArgument("identifier", "Table identifier");
+        m_commands.put("location", location);
+        
         Command read = new Command("read", "Read from a table");
         read.addOption("--help", "Show this help message and exit");
         read.addArgument("identifier", "Table identifier", true);

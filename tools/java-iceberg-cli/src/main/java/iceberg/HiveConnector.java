@@ -40,6 +40,8 @@ public class HiveConnector extends MetastoreConnector
         hiveConf = new HiveConf();
         hiveConf.set("hive.metastore.local", "false");
         hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metastoreUri);
+        hiveConf.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
+        hiveConf.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
         
         hiveClient = new HiveMetaStoreClient(hiveConf);
         
@@ -177,14 +179,15 @@ public class HiveConnector extends MetastoreConnector
 
     @Override
     public String getTableLocation() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        if (hiveTable == null)
+            loadTable();
+
+        return hiveTable.getSd().getLocation();
     }
 
     @Override
     public String getTableDataLocation() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        return getTableLocation();
     }
 
     @Override
