@@ -80,6 +80,8 @@ public class SubcommandParser {
             case "rename":
             case "commit":
             case "write":
+            case "location":
+            case "type":
                 validateTable();
                 break;
             case "default":

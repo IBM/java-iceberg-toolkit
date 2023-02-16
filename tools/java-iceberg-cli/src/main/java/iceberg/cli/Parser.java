@@ -108,7 +108,7 @@ public class Parser {
         
         Command location = new Command("location", "Fetch table location");
         location.addOption("--help", "Show this help message and exit");
-        location.addArgument("identifier", "Table identifier");
+        location.addArgument("identifier", "Table identifier", true);
         m_commands.put("location", location);
         
         Command read = new Command("read", "Read from a table");
