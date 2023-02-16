@@ -68,14 +68,8 @@ class FunctionalTest {
             Namespace nmspc = Namespace.of(namespace);
             
             System.out.println("Running test 1...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            
-            metaConn.createNamespace(nmspc);
-            
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Namespace " + namespace + " created\n");
+            boolean status = metaConn.createNamespace(nmspc);
+            Assertions.assertEquals(true, status);
             System.out.println("Test 1 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -93,14 +87,8 @@ class FunctionalTest {
             Schema schema = SchemaParser.fromJson("{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}");
             
             System.out.println("Running test 2...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            
-            metaConn.createTable(schema, null, false);
-            
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Creating the table " + namespace + "." + tablename + "\nTable created successfully\n");        
+            boolean status = metaConn.createTable(schema, null, false);
+            Assertions.assertEquals(true, status);
             System.out.println("Test 2 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -118,16 +106,9 @@ class FunctionalTest {
             String record = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
             
             System.out.println("Running test 3...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            
             String dataFiles = metaConn.writeTable(record, null);
-            metaConn.commitTable(dataFiles);
-            
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            String out_split = out.split("\n", 0)[4];
-            Assertions.assertEquals(out_split, "Txn Complete!");    
+            boolean status = metaConn.commitTable(dataFiles);
+            Assertions.assertEquals(true, status); 
             System.out.println("Test 3 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -167,14 +148,8 @@ class FunctionalTest {
             metaConn = new IcebergConnector(uri, warehouse, namespace, tablename);
             
             System.out.println("Running test 5...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            
-            metaConn.dropTable();
-            
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Dropping the table " + namespace + "." + tablename + "\nTable dropped successfully\n");    
+            boolean status = metaConn.dropTable();
+            Assertions.assertEquals(true, status);
             System.out.println("Test 5 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -191,14 +166,8 @@ class FunctionalTest {
             Namespace nmspc = Namespace.of(namespace);
             
             System.out.println("Running test 6...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            
-            metaConn.dropNamespace(nmspc);
-            
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Namespace " + namespace + " dropped\n");
+            boolean status = metaConn.dropNamespace(nmspc);
+            Assertions.assertEquals(true, status);
             System.out.println("Test 6 completed");
             passed_tests += 1;
         } catch (Throwable t) {

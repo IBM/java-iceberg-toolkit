@@ -65,12 +65,8 @@ class UserInputConsole {
         
         try {
             System.out.println("Running test 1...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Namespace " + namespace + " created\n");
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("Operation successful? true", out);
             System.out.println("Test 1 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -92,12 +88,8 @@ class UserInputConsole {
         
         try {
             System.out.println("Running test 2...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Creating the table " + namespace + "." + tablename + "\nTable created successfully\n");    
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("Operation successful? true", out);
             System.out.println("Test 2 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -119,13 +111,8 @@ class UserInputConsole {
         
         try {
             System.out.println("Running test 3...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            String out_split = out.split("\n", 0)[4];
-            Assertions.assertEquals(out_split, "Txn Complete!");    
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("Operation successful? true", out);    
             System.out.println("Test 3 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -147,12 +134,8 @@ class UserInputConsole {
         
         try {
             System.out.println("Running test 4...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "LIST OF TABLES\nTABLE NAME: TABLE TYPE\n" + tablename + ": ICEBERG\n");
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("LIST OF TABLES\nTABLE NAME\n" + tablename + ": ICEBERG\n", out);
             System.out.println("Test 4 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -174,12 +157,8 @@ class UserInputConsole {
         
         try {
             System.out.println("Running test 5...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Dropping the table " + namespace + "." + tablename + "\nTable dropped successfully\n");    
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("Operation successful? true", out);
             System.out.println("Test 5 completed");
             passed_tests += 1;
         } catch (Throwable t) {
@@ -201,12 +180,8 @@ class UserInputConsole {
                   
         try {
             System.out.println("Running test 6...");
-            ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(byteStream));
-            IcebergApplication.main(args);
-            String out = byteStream.toString();
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out)));
-            Assertions.assertEquals(out, "Namespace " + namespace + " dropped\n");        
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("Operation successful? true", out);
             System.out.println("Test 6 completed");
             passed_tests += 1;
         } catch (Throwable t) {

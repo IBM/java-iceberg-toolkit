@@ -109,39 +109,42 @@ public class IcebergConnector extends MetastoreConnector
         }
 
         iceberg_table = m_catalog.loadTable(m_tableIdentifier);
-
+        // Double check if the table was loaded properly
+        if (iceberg_table == null)
+            throw new TableNotLoaded("ERROR Loading table: " + m_tableIdentifier);
     }
     
-    public void createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
+    public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
         if (m_catalog.tableExists(m_tableIdentifier)) {
             if (overwrite) {
                 // To overwrite an existing table, drop it first
                  m_catalog.dropTable(m_tableIdentifier);
             } else {
                 System.out.println("ERROR: Table " + m_tableIdentifier + " already exists");
-                 return;
+                 return false;
             }
         }
         
         System.out.println("Creating the table " + m_tableIdentifier);
         m_catalog.createTable(m_tableIdentifier, schema, spec);
         System.out.println("Table created successfully");
+        
+        return true;
     }
     
-    public void dropTable() {
+    public boolean dropTable() {
         loadTable();
-        if (iceberg_table == null)
-            return;
         
         System.out.println("Dropping the table " + m_tableIdentifier);
-        m_catalog.dropTable(m_tableIdentifier);
-        System.out.println("Table dropped successfully");            
+        if (m_catalog.dropTable(m_tableIdentifier)) {
+            System.out.println("Table dropped successfully");
+            return true;
+        }
+        return false;
     }
     
     public List<List<String>> readTable() throws UnsupportedEncodingException {
         loadTable();
-        if (iceberg_table == null)
-            return null;
         
         // Get records
         System.out.println("Records in " + m_tableIdentifier + " :");
@@ -162,8 +165,6 @@ public class IcebergConnector extends MetastoreConnector
 
     public Map<Integer, List<Map<String, String>>> getPlanFiles() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
         
         TableScan scan = iceberg_table.newScan();
         Iterable<CombinedScanTask> scanTasks = scan.planTasks();
@@ -202,9 +203,11 @@ public class IcebergConnector extends MetastoreConnector
         return m_catalog.listNamespaces();
     }
     
-    public void createNamespace(Namespace namespace) throws AlreadyExistsException, UnsupportedOperationException {
+    public boolean createNamespace(Namespace namespace) throws AlreadyExistsException, UnsupportedOperationException {
         m_catalog.createNamespace(namespace);
         System.out.println("Namespace " + namespace + " created");
+        
+        return true;
         
     }
     
@@ -216,9 +219,11 @@ public class IcebergConnector extends MetastoreConnector
         return false;
     }
     
-    public void renameTable(TableIdentifier from, TableIdentifier to) throws NoSuchTableException, AlreadyExistsException {
+    public boolean renameTable(TableIdentifier from, TableIdentifier to) throws NoSuchTableException, AlreadyExistsException {
         m_catalog.renameTable(from, to);
         System.out.println("Table " + from + " renamed to " + to);
+        
+        return true;
     }
     
     public java.util.Map<java.lang.String,java.lang.String> loadNamespaceMetadata(Namespace namespace) throws NoSuchNamespaceException {
@@ -227,8 +232,6 @@ public class IcebergConnector extends MetastoreConnector
     
     public String getTableLocation() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
         
         String tableLocation = iceberg_table.location();
         
@@ -240,8 +243,6 @@ public class IcebergConnector extends MetastoreConnector
 
     public String getTableDataLocation() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
 
         LocationProvider provider = iceberg_table.locationProvider();
         String dataLocation = provider.newDataLocation("");
@@ -254,8 +255,6 @@ public class IcebergConnector extends MetastoreConnector
     
     public PartitionSpec getSpec() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
 
         PartitionSpec spec = iceberg_table.spec();
         
@@ -264,16 +263,12 @@ public class IcebergConnector extends MetastoreConnector
     
     public String getUUID() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
         TableMetadata metadata = ((HasTableOperations) iceberg_table).operations().current();
         return metadata.uuid();
     }
          
     public Snapshot getCurrentSnapshot() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
 
         Snapshot snapshot = iceberg_table.currentSnapshot();
         
@@ -282,18 +277,14 @@ public class IcebergConnector extends MetastoreConnector
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
 
         java.lang.Iterable<Snapshot> snapshots = iceberg_table.snapshots();
         
         return snapshots;
     }
     
-    public String writeTable(String records, String outputFile) throws UnsupportedEncodingException {
+    public String writeTable(String records, String outputFile) throws IOException {
         loadTable();
-        if (iceberg_table == null)
-            return null;
         
         System.out.println("Writing to the table " + m_tableIdentifier);
         
@@ -305,157 +296,144 @@ public class IcebergConnector extends MetastoreConnector
         JSONObject result = new JSONObject();
         JSONArray files = new JSONArray();
         
-        try {
-            Schema schema = iceberg_table.schema();
-            ImmutableList.Builder<Record> builder = ImmutableList.builder();
+        Schema schema = iceberg_table.schema();
+        ImmutableList.Builder<Record> builder = ImmutableList.builder();
+        
+        JSONArray listOfRecords = new JSONObject(records).getJSONArray("records");
+        for (int index = 0; index < listOfRecords.length(); ++index) {
+            JSONObject fields = listOfRecords.getJSONObject(index);
+            List<Types.NestedField> columns = schema.columns();
+            String[] fieldNames = JSONObject.getNames(fields);
+            // Verify if input columns are the same number as the required fields
+            // Optional fields shouldn't be part of the check
+            if (fieldNames.length > columns.size()) 
+                throw new IllegalArgumentException("Record has invalid number of fields");
             
-            JSONArray listOfRecords = new JSONObject(records).getJSONArray("records");
-            for (int index = 0; index < listOfRecords.length(); ++index) {
-                JSONObject fields = listOfRecords.getJSONObject(index);
-                List<Types.NestedField> columns = schema.columns();
-                String[] fieldNames = JSONObject.getNames(fields);
-                // Verify if input columns are the same number as the required fields
-                // Optional fields shouldn't be part of the check
-                if (fieldNames.length > columns.size()) 
-                    throw new IllegalArgumentException("Record has invalid number of fields");
-                
-                Record genericRecord = GenericRecord.create(schema);
-                for (Types.NestedField col : columns) {
-                    String colName = col.name();
-                    Type colType = col.type();
-                    // Validate that a required field is present in the record
-                    if (!fields.has(colName)) {
-                        if (col.isRequired())
-                            throw new IllegalArgumentException("Record is missing a required field: " + colName);
-                        else
-                            continue;
-                    }
-                    
-                    // Trim the input value
-                    String value = fields.get(colName).toString().trim();
-                    
-                    // Check for null values
-                    if (col.isRequired() && value.equalsIgnoreCase("null"))
-                        throw new IllegalArgumentException("Required field cannot be null: " + colName);
-                    
-                    // Store the value as an iceberg data type
-                    genericRecord.setField(colName, DataConversion.stringToIcebergType(value, colType));
+            Record genericRecord = GenericRecord.create(schema);
+            for (Types.NestedField col : columns) {
+                String colName = col.name();
+                Type colType = col.type();
+                // Validate that a required field is present in the record
+                if (!fields.has(colName)) {
+                    if (col.isRequired())
+                        throw new IllegalArgumentException("Record is missing a required field: " + colName);
+                    else
+                        continue;
                 }
-                builder.add(genericRecord.copy());
-            }
-                                                
-            AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
-                    System.getenv("AWS_ACCESS_KEY_ID"),
-                    System.getenv("AWS_SECRET_ACCESS_KEY"));
-    
-            SdkHttpClient client = ApacheHttpClient.builder()
-                    .maxConnections(100)
-                    .build();
                 
-            SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
-                    .region(Region.of(System.getenv("AWS_REGION")))
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                    .httpClient(client)
-                    .build();
-    
-            S3FileIO io = new S3FileIO(supplier);
-            OutputFile location = io.newOutputFile(outputFile);
-            System.out.println("New file created at: " + location);
-                        
-            FileAppender<Record> appender;
-            appender = Parquet.write(location)
-                            .schema(schema)
-                            .createWriterFunc(GenericParquetWriter::buildWriter)
-                            .build();
-            appender.addAll(builder.build());
-            io.close();
-            appender.close();
-            
-            // Add file info to the JSON object
-            JSONObject file = new JSONObject();
-            file.put("file_path", outputFile);
-            file.put("file_format", FileFormat.fromFileName(outputFile));
-            file.put("file_size_in_bytes", appender.length());
-            file.put("record_count", listOfRecords.length());
-            files.put(file);
-                        
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
+                // Trim the input value
+                String value = fields.get(colName).toString().trim();
+                
+                // Check for null values
+                if (col.isRequired() && value.equalsIgnoreCase("null"))
+                    throw new IllegalArgumentException("Required field cannot be null: " + colName);
+                
+                // Store the value as an iceberg data type
+                genericRecord.setField(colName, DataConversion.stringToIcebergType(value, colType));
+            }
+            builder.add(genericRecord.copy());
         }
+                                            
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
+                System.getenv("AWS_ACCESS_KEY_ID"),
+                System.getenv("AWS_SECRET_ACCESS_KEY"));
+    
+        SdkHttpClient client = ApacheHttpClient.builder()
+                .maxConnections(100)
+                .build();
+            
+        SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
+                .region(Region.of(System.getenv("AWS_REGION")))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .httpClient(client)
+                .build();
+
+        S3FileIO io = new S3FileIO(supplier);
+        OutputFile location = io.newOutputFile(outputFile);
+        System.out.println("New file created at: " + location);
+                    
+        FileAppender<Record> appender;
+        appender = Parquet.write(location)
+                        .schema(schema)
+                        .createWriterFunc(GenericParquetWriter::buildWriter)
+                        .build();
+        appender.addAll(builder.build());
+        io.close();
+        appender.close();
+        
+        // Add file info to the JSON object
+        JSONObject file = new JSONObject();
+        file.put("file_path", outputFile);
+        file.put("file_format", FileFormat.fromFileName(outputFile));
+        file.put("file_size_in_bytes", appender.length());
+        file.put("record_count", listOfRecords.length());
+        files.put(file);
         
         result.put("files", files);
                 
         return result.toString();
     }
     
-    public void commitTable(String dataFiles) {
+    public boolean commitTable(String dataFiles) {
         loadTable();
-        if (iceberg_table == null)
-            return;
         
         System.out.println("Commiting to the table " + m_tableIdentifier);
         
-        try {
-            PartitionSpec ps = iceberg_table.spec();
+        PartitionSpec ps = iceberg_table.spec();
 
-            AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
-                    System.getenv("AWS_ACCESS_KEY_ID"),
-                    System.getenv("AWS_SECRET_ACCESS_KEY"));
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
+                System.getenv("AWS_ACCESS_KEY_ID"),
+                System.getenv("AWS_SECRET_ACCESS_KEY"));
 
-            SdkHttpClient client = ApacheHttpClient.builder()
-                    .maxConnections(100)
-                    .build();
+        SdkHttpClient client = ApacheHttpClient.builder()
+                .maxConnections(100)
+                .build();
 
-            SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
-                    .region(Region.of(System.getenv("AWS_REGION")))
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                    .httpClient(client)
-                    .build();
+        SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
+                .region(Region.of(System.getenv("AWS_REGION")))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .httpClient(client)
+                .build();
+        
+        S3FileIO io = new S3FileIO(supplier);
+        
+        JSONArray files = new JSONObject(dataFiles).getJSONArray("files");
+        Transaction transaction = iceberg_table.newTransaction();
+        AppendFiles append = transaction.newAppend();
+        // Commit data files
+        System.out.println("Starting Txn");
+        for (int index = 0; index < files.length(); ++index) {
+            JSONObject file = files.getJSONObject(index);
+            String filePath = file.getString("file_path");
+            OutputFile outputFile = io.newOutputFile(filePath);
             
-            S3FileIO io = new S3FileIO(supplier);
-            
-            JSONArray files = new JSONObject(dataFiles).getJSONArray("files");
-            Transaction transaction = iceberg_table.newTransaction();
-            AppendFiles append = transaction.newAppend();
-            // Commit data files
-            System.out.println("Starting Txn");
-            for (int index = 0; index < files.length(); ++index) {
-                JSONObject file = files.getJSONObject(index);
-                String filePath = file.getString("file_path");
-                OutputFile outputFile = io.newOutputFile(filePath);
-                
-                // FIXME: Replace the hard-coded values with the commented
-                // out code in the next iteration
+            // FIXME: Replace the hard-coded values with the commented
+            // out code in the next iteration
 //                DataFile data = DataFiles.builder(ps)
 //                         .withPath(outputFile.location())
 //                         .withFormat(FileFormat.valueOf(file.getString("file_format")))
 //                         .withFileSizeInBytes(file.getInt("file_size_in_bytes"))
 //                         .withRecordCount(file.getInt("record_count"))
 //                         .build();
-                DataFile data = DataFiles.builder(ps)
-                         .withPath(outputFile.location())
-                         .withFormat(FileFormat.PARQUET)
-                         .withFileSizeInBytes(2000)
-                         .withRecordCount(1)
-                         .build();
-                
-                append.appendFile(data);
-            }
-            append.commit();
-            transaction.commitTransaction();
-            io.close();
-            System.out.println("Txn Complete!");
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
+            DataFile data = DataFiles.builder(ps)
+                     .withPath(outputFile.location())
+                     .withFormat(FileFormat.PARQUET)
+                     .withFileSizeInBytes(2000)
+                     .withRecordCount(1)
+                     .build();
+            
+            append.appendFile(data);
         }
+        append.commit();
+        transaction.commitTransaction();
+        io.close();
+        System.out.println("Txn Complete!");
         
+        return true;
     }
 
     public Schema getTableSchema() {
         loadTable();
-        if (iceberg_table == null)
-            return null;
-        
         return iceberg_table.schema();
     }
     
@@ -474,4 +452,12 @@ public class IcebergConnector extends MetastoreConnector
             super(message);
         }
     }
+    
+    @SuppressWarnings("serial")
+    public class TableNotLoaded extends RuntimeException {
+        public TableNotLoaded(String message) {
+            super(message);
+        }
+    }
+    
 }

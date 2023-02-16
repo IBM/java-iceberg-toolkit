@@ -63,13 +63,13 @@ public class HiveConnector extends MetastoreConnector
     }
 
     @Override
-    public void createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception {
+    public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionaility not supported yet.");
     }
 
     @Override
-    public void dropTable() throws Exception {
+    public boolean dropTable() throws Exception {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionaility not supported yet.");
     }
@@ -150,7 +150,7 @@ public class HiveConnector extends MetastoreConnector
     }
     
     @Override
-    public void createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException {
+    public boolean createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionaility not supported yet.");
     }
@@ -162,7 +162,7 @@ public class HiveConnector extends MetastoreConnector
     }
     
     @Override
-    public void renameTable(TableIdentifier from, TableIdentifier to) throws Exception, NoSuchTableException, AlreadyExistsException {
+    public boolean renameTable(TableIdentifier from, TableIdentifier to) throws Exception, NoSuchTableException, AlreadyExistsException {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionaility not supported yet.");
     }
@@ -211,7 +211,7 @@ public class HiveConnector extends MetastoreConnector
     }
 
     @Override
-    public void commitTable(String dataFileName) throws Exception {
+    public boolean commitTable(String dataFileName) throws Exception {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionaility not supported yet.");
     }

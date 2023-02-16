@@ -35,7 +35,7 @@ public class Parser {
 
         // Get subcommand
         if (cmdArguments.length == 0)
-            throw new ParseException("Missing action");
+            throw new ParseException("Error: Invalid operation");
         m_command = m_commands.get(cmdArguments[0]);
 
         // Parse subcommand options and arguments
