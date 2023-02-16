@@ -108,6 +108,7 @@ usage: java -jar <jar_name> [options] command [args]
                                   display
  -h,--help                        Show this help message
  -o,--output <console|csv|json>   Show output in this format
+    --snapshot <snapshot ID>      Snapshot ID to use
  -u,--uri <value>                 Hive metastore to use
  -w,--warehouse <value>           Table location
 
