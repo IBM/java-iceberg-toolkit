@@ -86,9 +86,14 @@ public class IcebergApplication {
             break;
         case "list":
             if (namespace != null)
-                output = printUtils.printTables(namespace, uri, warehouse);
-            else
-                output = printUtils.printNamespaces();
+                output = printUtils.printTables(namespace);
+            else {
+                boolean fetchAll = parser.fetchAll();
+                    if (fetchAll)
+                        output = printUtils.printAllTables();
+                    else
+                        output = printUtils.printNamespaces();
+            }
             break;
         case "files":
             output = printUtils.printFiles();
@@ -111,6 +116,9 @@ public class IcebergApplication {
             break;
         case "spec":
             output = printUtils.printSpec();
+            break;
+        case "type":
+            output = connector.getTableType(namespace, tableName);
             break;
         case "uuid":
             output = printUtils.printUUID();
