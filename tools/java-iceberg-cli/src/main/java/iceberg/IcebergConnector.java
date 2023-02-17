@@ -288,7 +288,7 @@ public class IcebergConnector extends MetastoreConnector
         return m_scan.snapshot();
     }
     
-    public Long currentSnapshotId() {
+    public Long getCurrentSnapshotId() {
         loadTable();
         
         return m_scan.snapshot().snapshotId();

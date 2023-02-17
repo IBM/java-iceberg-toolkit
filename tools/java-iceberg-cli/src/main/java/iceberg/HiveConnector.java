@@ -191,7 +191,7 @@ public class HiveConnector extends MetastoreConnector
     }
     
     @Override
-    public Long currentSnapshotId() throws Exception {
+    public Long getCurrentSnapshotId() throws Exception {
         return null;
     }
     
