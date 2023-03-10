@@ -7,13 +7,22 @@ package iceberg;
 import iceberg.utils.DataConversion;
 
 import java.util.*;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.net.URI;
+
 import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.hadoop.HadoopInputFile;
 import org.apache.iceberg.exceptions.NamespaceNotEmptyException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.CombinedScanTask;
@@ -29,6 +38,7 @@ import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.hive.HiveCatalog;
+import org.apache.iceberg.data.parquet.GenericParquetReaders;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.data.Record;
@@ -45,11 +55,21 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.SerializableSupplier;
+import org.apache.parquet.ParquetReadOptions;
+import org.apache.parquet.avro.AvroParquetReader;
+import org.apache.parquet.column.ParquetProperties;
+import org.apache.parquet.hadoop.Footer;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.ParquetReader;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.parquet.io.InputFile;
 import org.apache.thrift.TException;
 import org.apache.iceberg.TableMetadata;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.google.common.io.Files;
 import com.amazonaws.regions.Regions;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -374,7 +394,24 @@ public class IcebergConnector extends MetastoreConnector
         return result.toString();
     }
     
-    public boolean commitTable(String dataFiles) {
+    //helper...there is a getString(key, default) function online but not available to our version of jdk it seems
+    String getJsonStringOrDefault(JSONObject o, String key, String defVal) {
+    	try {
+    		return o.getString(key);
+    	} catch (JSONException e) {
+    		return defVal;
+    	}
+    }
+
+    Long getJsonLongOrDefault(JSONObject o, String key, Long defVal) {
+    	try {
+    		return o.getLong(key);
+    	} catch (JSONException e) {
+    		return defVal;
+    	}
+    }
+
+    public boolean commitTable(String dataFiles) throws Exception {
         loadTable();
         
         System.out.println("Commiting to the table " + m_tableIdentifier);
@@ -404,23 +441,75 @@ public class IcebergConnector extends MetastoreConnector
         System.out.println("Starting Txn");
         for (int index = 0; index < files.length(); ++index) {
             JSONObject file = files.getJSONObject(index);
+            // Required
             String filePath = file.getString("file_path");
             OutputFile outputFile = io.newOutputFile(filePath);
             
-            // FIXME: Replace the hard-coded values with the commented
-            // out code in the next iteration
-//                DataFile data = DataFiles.builder(ps)
-//                         .withPath(outputFile.location())
-//                         .withFormat(FileFormat.valueOf(file.getString("file_format")))
-//                         .withFileSizeInBytes(file.getInt("file_size_in_bytes"))
-//                         .withRecordCount(file.getInt("record_count"))
-//                         .build();
+            // Optional (but slower if not given)
+            String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
+            Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
+            Long numRecords = getJsonLongOrDefault(file, "record_count", null);
+
+            if(fileFormatStr == null) {
+            	// if file format is not provided, we'll try to infer from the file extension (if any)
+            	String fileLocation = outputFile.location();
+            	if(fileLocation.contains("."))
+            		fileFormatStr = fileLocation.substring(fileLocation.lastIndexOf('.') + 1, fileLocation.length());
+            	else
+            		fileFormatStr = "";
+            }
+
+            FileFormat fileFormat = null;
+            if(fileFormatStr.isEmpty())
+            	throw new Exception("Unable to infer the file format of the file to be committed: " + outputFile.location());
+            else if(fileFormatStr.toLowerCase().equals("parquet"))
+            	fileFormat = FileFormat.PARQUET;
+            else
+            	throw new Exception("Unsupported file format " + fileFormatStr + " cannot be committed: " + outputFile.location());
+
+            if(fileSize == null) {
+            	try {
+            		FileSystem fs = FileSystem.get(new URI(outputFile.location()), m_catalog.getConf());
+            		FileStatus fstatus = fs.getFileStatus(new Path(outputFile.location()));
+            		fileSize = fstatus.getLen();
+            	} catch (Exception e) {
+            		throw new Exception("Unable to infer the filesize of the file to be committed: " + outputFile.location());
+            	}
+            }
+
+            if (numRecords == null) {
+            	try {
+                	/* The apache parquet reader code wants a type of apache.parquet.io.InputFile, however the iceberg apis have no way
+                	 * to provide that object and the apache.iceberg.io.InputFile may not be passed to the parquet read functions directly.
+                	 * the iceberg apis want to prevent you from reading the parquet files directly and instead push you to go through
+                	 * it's own built in reader classes...but we cannot use those builtin reader classes because they require a scan of
+                	 * the iceberg table...which we haven't committed these files to yet. Internally iceberg provides a ParquetIO
+                	 * class which accepts an apache.iceberg.io.InputFile and implements the apache.parquet.io.InputFile interface, and this
+                	 * is what is then used to read the parquet files within their tablescan code. Since this class is private, it can only be
+                	 * instantiated using reflection, but we can make use of it to directly open the parquet file to collect the row count.
+                	 */
+            		Class<?> pifClass = Class.forName("org.apache.iceberg.parquet.ParquetIO");
+            		Constructor<?> pifCstr =pifClass.getDeclaredConstructor();
+            		pifCstr.setAccessible(true);
+            		Object pifInst = pifCstr.newInstance();
+            		Method pifMthd = pifClass.getDeclaredMethod("file", org.apache.iceberg.io.InputFile.class);
+            		pifMthd.setAccessible(true);
+            		org.apache.iceberg.io.InputFile pif = io.newInputFile(outputFile.location());
+            		Object parquetInputFile = pifMthd.invoke(pifInst, pif);
+
+            		ParquetFileReader reader = ParquetFileReader.open((InputFile) parquetInputFile);
+            		numRecords = reader.getRecordCount();
+            	} catch (Exception e) {
+            		throw new Exception("Unable to infer the number of records of the file to be committed: " + outputFile.location());
+            	}
+            }
+
             DataFile data = DataFiles.builder(ps)
-                     .withPath(outputFile.location())
-                     .withFormat(FileFormat.PARQUET)
-                     .withFileSizeInBytes(2000)
-                     .withRecordCount(1)
-                     .build();
+            		.withPath(outputFile.location())
+            		.withFormat(fileFormat)
+            		.withFileSizeInBytes(fileSize)
+            		.withRecordCount(numRecords)
+            		.build();
             
             append.appendFile(data);
         }
