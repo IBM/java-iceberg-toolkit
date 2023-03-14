@@ -40,8 +40,10 @@ public class HiveConnector extends MetastoreConnector
         hiveConf = new HiveConf();
         hiveConf.set("hive.metastore.local", "false");
         hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metastoreUri);
-        hiveConf.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
-        hiveConf.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
+        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
+            hiveConf.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
+        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
+            hiveConf.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
         
         hiveClient = new HiveMetaStoreClient(hiveConf);
         
