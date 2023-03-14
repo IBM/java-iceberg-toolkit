@@ -50,6 +50,7 @@ public class Parser {
     public String warehouse() { return optParser.warehouse(); }
     public String tableFormat() { return optParser.tableFormat(); }
     public String outputFormat() { return optParser.outputFormat(); }
+    public String snapshotId() { return optParser.snapshotId(); }
 
     // Get arguments
     public String outputFile() { return cmdParser.outputFile(); }

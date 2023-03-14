@@ -133,7 +133,7 @@ public class PrintUtils {
         String outputString = null;
         
         String planFiles = output.tableFiles(metaConn.getPlanFiles());
-        long snapshotId = metaConn.getCurrentSnapshot().snapshotId();
+        Long snapshotId = metaConn.getCurrentSnapshotId();
         switch (format) {
             case "json":
                 JSONObject filesAsJson = new JSONObject(planFiles);
@@ -172,7 +172,7 @@ public class PrintUtils {
         String outputString = null;
         
         String schema = output.tableSchema(metaConn.getTableSchema());
-        long snapshotId = metaConn.getCurrentSnapshot().snapshotId();
+        Long snapshotId = metaConn.getCurrentSnapshotId();
         switch (format) {
             case "json":
                 JSONObject schemaAsJson = new JSONObject(schema);

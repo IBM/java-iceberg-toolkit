@@ -15,12 +15,14 @@ public class OptionsParser {
     private String m_warehouse;
     private String m_outputFormat;
     private String m_tableFormat;
+    private String m_snapshotId;
 
     public OptionsParser() {
         m_uri = null;
         m_warehouse = null;
         m_outputFormat = "console";
         m_tableFormat = "iceberg";
+        m_snapshotId = null;
     }
     
     /**
@@ -53,6 +55,7 @@ public class OptionsParser {
         options.addOption(Option.builder("w").longOpt("warehouse").argName("value").hasArg().desc("Table location").build());
         options.addOption(Option.builder("o").longOpt("output").argName("console|csv|json").hasArg().desc("Show output in this format").build());
         options.addOption(Option.builder().longOpt("format").argName("iceberg|hive").hasArg().desc("The format of the table we want to display").build());
+        options.addOption(Option.builder().longOpt("snapshot").argName("snapshot ID").hasArg().desc("Snapshot ID to use").build());
         
         CommandLineParser parser = new DefaultParser();
 
@@ -75,6 +78,9 @@ public class OptionsParser {
                 // Get table format
                 if (cmd.hasOption("format"))
                     m_tableFormat = cmd.getOptionValue("format");
+                // Get snapshot id
+                if (cmd.hasOption("snapshot"))
+                    m_snapshotId = cmd.getOptionValue("snapshot");
             }
          
         } catch (ParseException exp) {
@@ -88,5 +94,5 @@ public class OptionsParser {
     public String warehouse() { return m_warehouse; }
     public String tableFormat() { return m_tableFormat; }
     public String outputFormat() { return m_outputFormat; }
-    
+    public String snapshotId() { return m_snapshotId; }
 }

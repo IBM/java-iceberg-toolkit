@@ -46,6 +46,7 @@ public class IcebergApplication {
         String tableFormat = parser.tableFormat();
         String outputFormat = parser.outputFormat();
         String schemaJsonString = parser.getPositionalArg("schema");
+        String snapshotId = parser.snapshotId();
         
         // Initialize HiveCatalog
         MetastoreConnector connector;
@@ -55,6 +56,10 @@ public class IcebergApplication {
             connector = new IcebergConnector(uri, warehouse, namespace, tableName);
         else
             throw new ParseException("Unsupported table format: " + tableFormat);
+        
+        // Set user specified snapshot ID, if any
+        if (snapshotId != null)
+            connector.setSnapshotId(Long.valueOf(snapshotId));
         
         PrintUtils printUtils = new PrintUtils(connector, outputFormat);
         // Perform action

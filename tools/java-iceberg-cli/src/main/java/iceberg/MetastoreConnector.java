@@ -30,6 +30,7 @@ import org.apache.iceberg.PartitionField;
 
 public abstract class MetastoreConnector 
 {
+    protected Long m_snapshotId = null;
 
     public MetastoreConnector(String metastoreUri, String warehouse, String namespace, String tableName) {
     }
@@ -55,6 +56,8 @@ public abstract class MetastoreConnector
     public abstract String getTableDataLocation() throws Exception;
     
     public abstract Snapshot getCurrentSnapshot() throws Exception;
+    
+    public abstract Long getCurrentSnapshotId() throws Exception;
 
     public abstract Iterable<Snapshot> getListOfSnapshots() throws Exception;
     
@@ -76,7 +79,11 @@ public abstract class MetastoreConnector
     
     public abstract PartitionSpec getSpec() throws Exception;
     
-    public abstract String getUUID()  throws Exception; 
+    public abstract String getUUID()  throws Exception;
+    
+    public void setSnapshotId(Long snapshotId) {
+        this.m_snapshotId = snapshotId;
+    }
     
     @SuppressWarnings("serial")
     class TableNotFoundException extends RuntimeException {
