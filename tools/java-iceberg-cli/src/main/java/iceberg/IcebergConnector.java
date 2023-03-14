@@ -84,6 +84,7 @@ public class IcebergConnector extends MetastoreConnector
     HiveCatalog m_catalog;
     TableIdentifier m_tableIdentifier;
     Table iceberg_table;
+    TableScan m_scan;
 
     public IcebergConnector(String metastoreUri, String warehouse, String namespace, String tableName) {
         // TODO: Get type of catalog that the user wants and then initialize accordingly
@@ -98,8 +99,10 @@ public class IcebergConnector extends MetastoreConnector
         
         // Set Hadoop configuration
         Configuration config = new Configuration();
-        config.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
-        config.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
+        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
+            config.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
+        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
+            config.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
         if (warehouse != null)
             config.set("hive.metastore.warehouse.dir", warehouse);
         m_catalog.setConf(config);
@@ -122,26 +125,38 @@ public class IcebergConnector extends MetastoreConnector
         m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
 
-    public void loadTable() {
+    public Table loadTable(TableIdentifier identifier) {
         // Check if the table exists
-        if (!m_catalog.tableExists(m_tableIdentifier)) {
-            throw new TableNotFoundException("ERROR: Table " + m_tableIdentifier + " does not exist");
+        if (!m_catalog.tableExists(identifier)) {
+            throw new TableNotFoundException("ERROR: Table " + identifier + " does not exist");
         }
 
-        iceberg_table = m_catalog.loadTable(m_tableIdentifier);
+        Table table = m_catalog.loadTable(identifier);
         // Double check if the table was loaded properly
-        if (iceberg_table == null)
-            throw new TableNotLoaded("ERROR Loading table: " + m_tableIdentifier);
+        if (table == null)
+            throw new TableNotLoaded("ERROR Loading table: " + identifier);
+        
+        return table;
+    }
+    
+    public void loadTable() {
+        iceberg_table = loadTable(m_tableIdentifier);
+
+        // Use snapshot passed by the user.
+        // By default, use the latest snapshot.
+        m_scan = iceberg_table.newScan();
+        if (m_snapshotId != null) {
+            m_scan = m_scan.useSnapshot(m_snapshotId);
+        }
     }
     
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
         if (m_catalog.tableExists(m_tableIdentifier)) {
             if (overwrite) {
                 // To overwrite an existing table, drop it first
-                 m_catalog.dropTable(m_tableIdentifier);
+                m_catalog.dropTable(m_tableIdentifier);
             } else {
-                System.out.println("ERROR: Table " + m_tableIdentifier + " already exists");
-                 return false;
+                throw new RuntimeException("Table " + m_tableIdentifier + " already exists");
             }
         }
         
@@ -168,7 +183,9 @@ public class IcebergConnector extends MetastoreConnector
         
         // Get records
         System.out.println("Records in " + m_tableIdentifier + " :");
-        CloseableIterable<Record> records = IcebergGenerics.read(iceberg_table).build();
+        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(iceberg_table);
+        // Use specified snapshot, latest by default
+        CloseableIterable<Record> records = scanBuilder.useSnapshot(m_scan.snapshot().snapshotId()).build();
         List<List<String>> output = new ArrayList<List<String>>();
         for (Record record : records) {
             int numFields = record.size();
@@ -186,8 +203,7 @@ public class IcebergConnector extends MetastoreConnector
     public Map<Integer, List<Map<String, String>>> getPlanFiles() {
         loadTable();
         
-        TableScan scan = iceberg_table.newScan();
-        Iterable<CombinedScanTask> scanTasks = scan.planTasks();
+        Iterable<CombinedScanTask> scanTasks = m_scan.planTasks();
         Map<Integer, List<Map<String, String>>> tasks = new HashMap<Integer, List<Map<String, String>>>();
         int index = 0;
         for (CombinedScanTask scanTask : scanTasks) {
@@ -289,10 +305,17 @@ public class IcebergConnector extends MetastoreConnector
          
     public Snapshot getCurrentSnapshot() {
         loadTable();
-
-        Snapshot snapshot = iceberg_table.currentSnapshot();
         
-        return snapshot;
+        return m_scan.snapshot();
+    }
+    
+    public Long getCurrentSnapshotId() {
+        loadTable();
+        
+        Snapshot snapshot = getCurrentSnapshot();
+        if (snapshot != null)
+            return snapshot.snapshotId();
+        return null;
     }
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
@@ -523,7 +546,7 @@ public class IcebergConnector extends MetastoreConnector
 
     public Schema getTableSchema() {
         loadTable();
-        return iceberg_table.schema();
+        return m_scan.schema();
     }
     
     public String getTableType(String database, String table) throws Exception {

@@ -187,8 +187,12 @@ public class HiveConnector extends MetastoreConnector
 
     @Override
     public Snapshot getCurrentSnapshot() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        return null;
+    }
+    
+    @Override
+    public Long getCurrentSnapshotId() throws Exception {
+        return null;
     }
     
     @Override
@@ -199,8 +203,7 @@ public class HiveConnector extends MetastoreConnector
 
     @Override
     public Iterable<Snapshot> getListOfSnapshots() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        return new ArrayList<Snapshot>();
     }
 
     @Override
