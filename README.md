@@ -118,11 +118,13 @@ Commands:
   read                 Read from a table
   commit               Commit file(s) to a table
   list                 List tables or namespaces
+  type                 Fetch table type
   uuid                 Fetch uuid of a table
   spec                 Fetch partition spec of a table
   rename               Rename a table a table
   create               Create a table or a namespace
   files                List data files of a table
+  location             Fetch table location
   describe             Get details of a table or a namespace
   write                Write to a table
   snapshot             Fetch latest or all snapshot(s) of a table
@@ -188,7 +190,7 @@ Get schema of a table | Y | Y
 Get uuid of a table | Y |
 Get partition spec of a table | Y |
 Get current or all snapshots of a table | Y |
-List namespaces | Y
+List namespaces | Y | Y
 List tables in a namespace | Y | Y
 Read from a table | Y
 Rename a table | Y |

@@ -135,7 +135,7 @@ class UserInputConsole {
         try {
             System.out.println("Running test 4...");
             String out = new IcebergApplication().processRequest(args);
-            Assertions.assertEquals("LIST OF TABLES\nTABLE NAME\n" + tablename + ": ICEBERG\n", out);
+            Assertions.assertEquals("LIST OF TABLES\nTABLE NAME\n" + tablename + "\n", out);
             System.out.println("Test 4 completed");
             passed_tests += 1;
         } catch (Throwable t) {

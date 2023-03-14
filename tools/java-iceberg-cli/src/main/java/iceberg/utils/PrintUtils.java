@@ -58,28 +58,33 @@ public class PrintUtils {
     }
     
     /**
-     * Get list of tables from MetastoreConnector and output to the user is the given format
+     * Get list of tables in all namespaces
      * @param namespace
      * @param uri
      * @param warehouse
      * @throws Exception 
      */
-    public String printTables(String namespace, String uri, String warehouse) throws Exception {
-        IcebergConnector metaConnIceberg = new IcebergConnector(uri, warehouse, namespace, null);
-        java.util.List<String> tables_iceberg = metaConnIceberg.listTables(namespace);
-        HiveConnector metaConnHive = new HiveConnector(uri, warehouse, namespace, null);
-        java.util.List<String> tables_all = metaConnHive.listTables(namespace);
-        ArrayList <String> table_ttype = new ArrayList<String>();
-        for (String table : tables_all) {
-            if (tables_iceberg.contains(namespace + "." + table)) {
-                table_ttype.add(table.toString() + ": " + metaConnIceberg.getTableType(namespace, table));
-            }
-            else {
-                table_ttype.add(table.toString() + ": " + metaConnHive.getTableType(namespace, table));
-            }
+    public String printAllTables() throws Exception {
+        List<Namespace> namespaces = metaConn.listNamespaces();
+        Map<String, List<String>> tables = new HashMap<String, List<String>>();
+        for (Namespace namespace : namespaces) {
+            String namespaceName = namespace.toString();
+            tables.put(namespaceName, metaConn.listTables(namespaceName));
         }
-        
-        return output.listTables(table_ttype);
+
+        return output.listAllTables(tables);
+    }
+
+    /**
+     * Get list of tables in a namespace in the user specified format
+     * @param namespace
+     * @param uri
+     * @param warehouse
+     * @throws Exception 
+     */
+    public String printTables(String namespace) throws Exception {
+        java.util.List<String> tables = metaConn.listTables(namespace);
+        return output.listTables(tables);
     }
 
     /**

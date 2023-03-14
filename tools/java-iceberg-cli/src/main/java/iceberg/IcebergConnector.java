@@ -91,7 +91,7 @@ public class IcebergConnector extends MetastoreConnector
         super(metastoreUri, warehouse, namespace, tableName);
         initCatalog(metastoreUri, warehouse);
         if (tableName != null)
-            initTableIdentifier(namespace, tableName);
+            setTableIdentifier(namespace, tableName);
     }
     
     private void initCatalog(String metastoreUri, String warehouse) {
@@ -110,15 +110,12 @@ public class IcebergConnector extends MetastoreConnector
         // Set properties
         Map <String, String> properties = new HashMap<String, String>();
         properties.put("uri", metastoreUri);
+        properties.put("list-all-tables", "true");
         if (warehouse != null)
             properties.put("warehouse", warehouse);
         
         // Initialize Hive catalog
         m_catalog.initialize("hive", properties);
-    }
-    
-    private void initTableIdentifier(String namespace, String tableName) {
-        m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
     
     public void setTableIdentifier(String namespace, String tableName) {
@@ -168,7 +165,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public boolean dropTable() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Dropping the table " + m_tableIdentifier);
         if (m_catalog.dropTable(m_tableIdentifier)) {
@@ -179,7 +177,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public List<List<String>> readTable() throws UnsupportedEncodingException {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         // Get records
         System.out.println("Records in " + m_tableIdentifier + " :");
@@ -201,7 +200,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public Map<Integer, List<Map<String, String>>> getPlanFiles() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         Iterable<CombinedScanTask> scanTasks = m_scan.planTasks();
         Map<Integer, List<Map<String, String>>> tasks = new HashMap<Integer, List<Map<String, String>>>();
@@ -227,12 +227,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public java.util.List<String> listTables(String namespace) {
-        List<TableIdentifier> table_list = m_catalog.listTables(Namespace.of(namespace));
-        List<String> table_list_return = new ArrayList<String>();
-        for (TableIdentifier table : table_list) {
-            table_list_return.add(table.toString());
-        }
-        return table_list_return;
+        List<TableIdentifier> tables = m_catalog.listTables(Namespace.of(namespace));
+        return tables.stream().map(TableIdentifier::name).toList();
     }
     
     public java.util.List<Namespace> listNamespaces() {
@@ -267,7 +263,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String getTableLocation() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         String tableLocation = iceberg_table.location();
         
@@ -278,7 +275,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public String getTableDataLocation() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         LocationProvider provider = iceberg_table.locationProvider();
         String dataLocation = provider.newDataLocation("");
@@ -290,7 +288,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public PartitionSpec getSpec() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         PartitionSpec spec = iceberg_table.spec();
         
@@ -298,19 +297,22 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String getUUID() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         TableMetadata metadata = ((HasTableOperations) iceberg_table).operations().current();
         return metadata.uuid();
     }
          
     public Snapshot getCurrentSnapshot() {
-        loadTable();
-        
+        if (iceberg_table == null)
+            loadTable();
+
         return m_scan.snapshot();
     }
     
     public Long getCurrentSnapshotId() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         Snapshot snapshot = getCurrentSnapshot();
         if (snapshot != null)
@@ -319,7 +321,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
 
         java.lang.Iterable<Snapshot> snapshots = iceberg_table.snapshots();
         
@@ -327,7 +330,8 @@ public class IcebergConnector extends MetastoreConnector
     }
     
     public String writeTable(String records, String outputFile) throws IOException {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Writing to the table " + m_tableIdentifier);
         
@@ -435,7 +439,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public boolean commitTable(String dataFiles) throws Exception {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         
         System.out.println("Commiting to the table " + m_tableIdentifier);
         
@@ -545,7 +550,8 @@ public class IcebergConnector extends MetastoreConnector
     }
 
     public Schema getTableSchema() {
-        loadTable();
+        if (iceberg_table == null)
+            loadTable();
         return m_scan.schema();
     }
     

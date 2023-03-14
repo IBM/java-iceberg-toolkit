@@ -33,13 +33,17 @@ public class HiveConnector extends MetastoreConnector
     HiveMetaStoreClient hiveClient;
     String database;
     String table;
-    Table hive_table;
+    Table hiveTable;
     
     public HiveConnector(String metastoreUri, String warehouse, String namespace, String tableName) throws MetaException {
         super(metastoreUri, warehouse, namespace, tableName);
         hiveConf = new HiveConf();
         hiveConf.set("hive.metastore.local", "false");
         hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metastoreUri);
+        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
+            hiveConf.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
+        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
+            hiveConf.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
         
         hiveClient = new HiveMetaStoreClient(hiveConf);
         
@@ -48,7 +52,7 @@ public class HiveConnector extends MetastoreConnector
     }
     
     public void loadTable() throws Exception {
-        hive_table = hiveClient.getTable(database, table);
+        hiveTable = hiveClient.getTable(database, table);
     }
     
     public void setTableIdentifier(String namespace, String tableName) {
@@ -59,7 +63,10 @@ public class HiveConnector extends MetastoreConnector
     public String getTableType(String database, String table) throws Exception {
         setTableIdentifier(database, table);
         loadTable();
-        return hive_table.getTableType();
+        String tableType = hiveTable.getParameters().get("table_type");
+        if (tableType != null)
+            return tableType;
+        return hiveTable.getTableType();
     }
 
     @Override
@@ -132,21 +139,20 @@ public class HiveConnector extends MetastoreConnector
 
     @Override
     public List<String> listTables(String namespace) throws MetaException {
-        // TODO Auto-generated method stub
         return hiveClient.getAllTables(namespace);
     }
     
     
     @Override
     public List<Namespace> listNamespaces() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        return hiveClient.getAllDatabases().stream().map(Namespace::of).toList();
     }
     
     @Override
     public java.util.Map<java.lang.String,java.lang.String> loadNamespaceMetadata(Namespace namespace) throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        Map<String, String> metadata = new HashMap<String, String>();
+        metadata.put("location", hiveClient.getDatabase(namespace.toString()).getLocationUri());
+        return metadata;
     }
     
     @Override
@@ -175,14 +181,15 @@ public class HiveConnector extends MetastoreConnector
 
     @Override
     public String getTableLocation() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        if (hiveTable == null)
+            loadTable();
+
+        return hiveTable.getSd().getLocation();
     }
 
     @Override
     public String getTableDataLocation() throws Exception {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        return getTableLocation();
     }
 
     @Override

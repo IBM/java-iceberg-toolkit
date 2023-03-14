@@ -103,8 +103,14 @@ public class Parser {
         
         Command list = new Command("list", "List tables or namespaces");
         list.addOption("--help", "Show this help message and exit");
+        list.addOption("--all", "Show tables in all namespaces");
         list.addArgument("identifier", "Table or namespace identifier");
         m_commands.put("list", list);
+        
+        Command location = new Command("location", "Fetch table location");
+        location.addOption("--help", "Show this help message and exit");
+        location.addArgument("identifier", "Table identifier", true);
+        m_commands.put("location", location);
         
         Command read = new Command("read", "Read from a table");
         read.addOption("--help", "Show this help message and exit");
@@ -133,6 +139,11 @@ public class Parser {
         spec.addOption("--help", "Show this help message and exit");
         spec.addArgument("identifier", "Table identifier", true);
         m_commands.put("spec", spec);
+        
+        Command type = new Command("type", "Fetch table type");
+        type.addOption("--help", "Show this help message and exit");
+        type.addArgument("identifier", "Table identifier", true);
+        m_commands.put("type", type);
         
         Command uuid = new Command("uuid", "Fetch uuid of a table");
         uuid.addOption("--help", "Show this help message and exit");
