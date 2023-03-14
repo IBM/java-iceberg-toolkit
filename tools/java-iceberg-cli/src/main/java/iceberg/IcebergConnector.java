@@ -79,8 +79,10 @@ public class IcebergConnector extends MetastoreConnector
         
         // Set Hadoop configuration
         Configuration config = new Configuration();
-        config.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
-        config.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
+        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
+            config.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
+        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
+            config.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
         if (warehouse != null)
             config.set("hive.metastore.warehouse.dir", warehouse);
         m_catalog.setConf(config);
@@ -132,10 +134,9 @@ public class IcebergConnector extends MetastoreConnector
         if (m_catalog.tableExists(m_tableIdentifier)) {
             if (overwrite) {
                 // To overwrite an existing table, drop it first
-                 m_catalog.dropTable(m_tableIdentifier);
+                m_catalog.dropTable(m_tableIdentifier);
             } else {
-                System.out.println("ERROR: Table " + m_tableIdentifier + " already exists");
-                 return false;
+                throw new RuntimeException("Table " + m_tableIdentifier + " already exists");
             }
         }
         
@@ -291,7 +292,10 @@ public class IcebergConnector extends MetastoreConnector
     public Long getCurrentSnapshotId() {
         loadTable();
         
-        return m_scan.snapshot().snapshotId();
+        Snapshot snapshot = getCurrentSnapshot();
+        if (snapshot != null)
+            return snapshot.snapshotId();
+        return null;
     }
 
     public java.lang.Iterable<Snapshot> getListOfSnapshots() {
