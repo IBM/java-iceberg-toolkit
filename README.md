@@ -1,69 +1,55 @@
 # java-iceberg-toolkit
-java-iceberg-toolkit is a Java implementation for performing operations on Apache Iceberg and Hive tables. For a detailed list of supported operations, refer to [Supported Operations](/README.md#supported-operations).
+java-iceberg-toolkit is a Java implementation for performing operations on Apache Iceberg and Hive tables to enable open data lakehouse access to developers, data scientists and DB users. For more information, visit ["A java toolkit for Apache Iceberg open table format"](https://medium.com/@pandey.brajesh/a-java-toolkit-for-apache-iceberg-open-table-format-64c329d6c719). For a detailed list of supported operations, refer to [Supported Operations](/README.md#supported-operations).
 
 **Table of Contents**
 * [Pre-Requisites](/README.md#pre-requisites)
-* [Limitations](/README.md#limitations)
 * [Install and Build](/README.md#install-and-build)
 * [Configuration](/README.md#configuration)
 * [CLI](/README.md#cli-2)
 * [API](/README.md#api)
+* [Limitations](/README.md#limitations)
 
 
 ## Pre-Requisites
 
+1. Hive Metastore setup
+2. An object store (Amazon S3, IBM COS, etc.)
+3. Credentials to access the bucket (if not public), refer to [Configuration](/README.md#configuration)
+4. Java version 17 and above
+5. Apache Maven
+
 ### CLI
 
-1. Java version 8 and above
-2. Apache Maven Dependencies 
-3. AWS Credentials set as environment variables 
+1. Apache Maven Dependencies 
+2. Credentials set as environment variables 
 
 ### Testing
 
-1. Java version 13 and above
-2. JUnit5
-3. AWS Credentials set as environment variable
-4. URI set as "URI" environment variable
-5. Warehouse set as "WAREHOUSE" environment variable
-
-## Limitations
-
-### Supported Types
-
-The following table represents the list of Iceberg primitive data types supported by java-iceberg-toolkit:
-
-No. | Primitive data type
----|---|
-#1 | Types.IntegerType
-#2 | Types.StringType
-#3 | Types.DoubleType
-#4 | Types.TimestampType (without zone)
-#5 | Types.BinaryType
-#6 | Types.BooleanType
-#7 | Types.DateType
-#8 | Types.TimestampType (with zone)
-#9 | Types.DecimalType
-#10 | Types.FixedType
-#11 | Types.FloatType
-#12 | Types.LongType
-#13 | Types.TimeType
-#14 | Types.UUIDType
+1. JUnit5
+2. Credentials set as environment variable
+3. URI set as "URI" environment variable
+4. Warehouse set as "WAREHOUSE" environment variable
 
 ## Install and Build 
 
-1- Build an image
+1- Build an image either using the provided script or a container engine's (e.g. docker, podman) CLI of your choice. For this example, we are using podman.
 ```
-sudo ./createImages.sh
+# using provided script
+./createImages.sh
+
+# using preferred container engine's cli remove and un-tag an existing image before building a new one
+podman rmi -f java-iceberg-cli:latest
+podman build --tag java-iceberg-cli:latest --file Dockerfile . 
 ```
 
 2- Create a container and run it as a detached process
 ```
-sudo podman run -d localhost/java-iceberg-cli:latest
+podman run -d localhost/java-iceberg-cli:latest
 ```
 
 3- Open a remote shell to the container
 ```
-sudo podman exec -it <container_name> bash
+podman exec -it <container_name> bash
 ```
 
 4- Run the Java tool
@@ -74,13 +60,20 @@ java -jar /home/java-iceberg-cli/target/<jar_name> --help
 ## Configuration
 
 ### CLI
-Pass in the URI to the Hive Metastore using -u or --uri options. You would need to pass the warehouse path when creating a new namespace using -w or --warehouse options. 
+Pass in the URI to the Hive Metastore using -u or --uri options and optionally specify a storage path when creating a new namespace using -w or --warehouse options. By default, the default FS value specified in Hive's configuration file will be used as the warehouse path.
 
-Set credentials using environment variables as:
+Set credentials for the object store using environment variables. Please note that you would need to specify AWS_ENDPOINT if using a non-AWS object store.
 ```
 export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 export AWS_REGION=
+# specify endpoint to a non-AWS object store, if applicable
+export AWS_ENDPOINT=
+```
+
+Credentials can also be passed to the CLI as:
+```
+{'type':'AWS','credentials':{'AWS_ACCESS_KEY_ID':'<id>','AWS_SECRET_ACCESS_KEY':'<key>', 'ENDPOINT':'uri'}}
 ```
 
 ### Unit Tests
@@ -89,10 +82,12 @@ Set credentials using environment variables as:
 export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 export AWS_REGION=
+# specify endpoint to a non-AWS object store, if applicable
+export AWS_ENDPOINT=
 export URI=
 export WAREHOUSE=
 ```
-If URI and WAREHOUSE are not set as environment variables, the test will promp you to enter them using the command line before the tests are run. 
+If URI is not set as environment variables then, the tests will exit. 
 
 ## CLI
 
@@ -104,6 +99,9 @@ The CLI provides various operations on Iceberg and Hive tables.
 ```
 $ java -jar <jar_name> --help
 usage: java -jar <jar_name> [options] command [args]
+ -c,--credential <credentials>    Supported credentials : AWS
+    --catalog <value>             Read properties for this catalog from
+                                  the config file
     --format <iceberg|hive>       The format of the table we want to
                                   display
  -h,--help                        Show this help message
@@ -115,6 +113,7 @@ usage: java -jar <jar_name> [options] command [args]
 Commands:
   drop                 Drop a table or a namespace
   schema               Fetch schema of a table
+  metadata             Get table metadata
   read                 Read from a table
   commit               Commit file(s) to a table
   list                 List tables or namespaces
@@ -128,6 +127,7 @@ Commands:
   describe             Get details of a table or a namespace
   write                Write to a table
   snapshot             Fetch latest or all snapshot(s) of a table
+  tasks                List scan tasks of a table
 ```
 Each subcommand provides a help message of its own.
 ```
@@ -142,6 +142,68 @@ Options:
 Positional Arguments:
   identifier           Table or namespace identifier
   schema               Create a table using this schema
+```
+
+### Security
+
+To use Kerberos enabled Metastore you can use any of the following two options:
+
+1- Set up values in the config file (~/.java_iceberg_cli.yaml):
+```
+catalogs:
+- name: "default"
+  type: "HIVE"
+  properties: {...}
+  conf:
+   ...
+   hadoop.security.authentication: "kerberos"
+   hive.metastore.sasl.enabled: "true"
+   hive.metastore.kerberos.principal: "<principal>"
+   hive.metastore.kerberos.keytab.file: "<path_to_keytab"
+   ...
+```
+
+2- Set up the following environment variables:
+```
+HADOOP_AUTHENTICATION="kerberos"
+METASTORE_SASL_ENABLED="true"
+```
+Specify kerberos principal and keytab as:
+```
+METASTORE_KERBEROS_PRINCIPLE=<principal>
+METASTORE_KERBEROS_KEYTAB=<path_to_keytab>
+```
+Or as:
+```
+KRB5PRINCIPAL=<principal>
+KRB5KEYTAB=<path_to_keytab>
+```
+
+Likewise, to use SSL enabled Metastore, there are two options:
+
+1- Set up values in the config file (~/.java_iceberg_cli.yaml):
+```
+catalogs:
+- name: "default"
+  type: "HIVE"
+  properties: {...}
+  conf:
+   ...
+   hive.metastore.use.SSL: "true"
+   hive.metastore.keystore.path: "<path>"
+   hive.metastore.keystore.password: "<pw>"
+   hive.metastore.truststore.path: "<path>"
+   hive.metastore.truststore.password: "<pw>"
+   ...
+```
+
+2- Set up the following environment variables:
+```
+METASTORE_SSL_ENABLED="true"
+METASTORE_KEYSTORE_PATH=<path_to_keystore>
+METASTORE_KEYSTORE_PASSWORD=<password>
+METASTORE_TRUSTSTORE_PATH=<path_to_truststore>
+METASTORE_TRUSTSTORE_PASSWORD=<password>
 ```
 
 ### Sample CLI Commands
@@ -186,12 +248,15 @@ Commit to a table | Y |
 Describe a namespace or a table | Y
 Drop a namespace or a table | Y 
 Get plan tasks of a table | Y | Y
+Get plan files of a table | Y |
 Get schema of a table | Y | Y
 Get uuid of a table | Y |
 Get partition spec of a table | Y |
+Get table metadata | Y |
 Get current or all snapshots of a table | Y |
 List namespaces | Y | Y
 List tables in a namespace | Y | Y
+List tables in all namespaces | Y |
 Read from a table | Y
 Rename a table | Y |
 Write to a table | Y |
@@ -224,3 +289,26 @@ connector.createTable(schema, spec, overwrite);
 </details>
 
 For a detailed list of API usage, please refer to [sample api usage](docs/sample_api_usage.md).
+
+## Limitations
+
+### Supported Types
+
+The following table represents the list of Iceberg primitive data types supported by java-iceberg-toolkit:
+
+No. | Primitive data type
+---|---|
+#1 | Types.IntegerType
+#2 | Types.StringType
+#3 | Types.DoubleType
+#4 | Types.TimestampType (without zone)
+#5 | Types.BinaryType
+#6 | Types.BooleanType
+#7 | Types.DateType
+#8 | Types.TimestampType (with zone)
+#9 | Types.DecimalType
+#10 | Types.FixedType
+#11 | Types.FloatType
+#12 | Types.LongType
+#13 | Types.TimeType
+#14 | Types.UUIDType
