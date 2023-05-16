@@ -1,10 +1,15 @@
-package iceberg;
+package iceberg_cli;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestMethodOrder;
+
+import iceberg_cli.*;
+
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +24,6 @@ import java.util.UUID;
 
 import javax.servlet.ServletException;
 
-import iceberg.*;
-
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class UserInputConsole {
     
@@ -34,17 +37,13 @@ class UserInputConsole {
     
     @BeforeAll
     static void setup() {
-        Scanner input = new Scanner(System.in);
         uri = System.getenv("URI");
         if (uri == null) {
-            System.out.println("URI environment variable not set. Enter URI:");
-            uri = input.next();
+            System.out.println("URI environment variable not set");
+            System.exit(1);
+            
         }
         warehouse = System.getenv("WAREHOUSE");
-        if (warehouse == null) {
-            System.out.println("WAREHOUSE environment variable not set. Enter WAREHOUSE:");
-            warehouse = input.next();
-        }
         namespace = "test_setup" + UUID.randomUUID().toString().replace("-", "");
         tablename = "test_table";
         System.out.println("\n*** Starting Tests ***\n");
