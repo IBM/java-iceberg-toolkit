@@ -1,8 +1,8 @@
 /**
- * (c) Copyright IBM Corp. 2023. All Rights Reserved.
+ * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.utils.output;
+package iceberg_cli.utils.output;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +14,24 @@ import org.apache.iceberg.Snapshot;
 
 public class Output {
     
+    public String tableMetadata(Snapshot snapshot, Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
+        StringBuilder builder = new StringBuilder();
+        builder.append("SNAPSHOT\n");
+        builder.append(currentSnapshot(snapshot));
+        builder.append("\nSCHEMA\n");
+        builder.append(tableSchema(schema));
+        builder.append("\nTABLE LOCATION\n");
+        builder.append(tableLocation);
+        builder.append("\nDATA LOCATION\n");
+        builder.append(dataLocation);
+        builder.append("\nTABLE TYPE\n");
+        builder.append(type);
+        
+        return builder.toString();
+    }
+    
     public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
-            Schema schema, String tableLocation, String dataLocation) throws Exception {
+            Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append(tableFiles(planFileTasks));
         builder.append("SNAPSHOT\n");
@@ -26,6 +42,8 @@ public class Output {
         builder.append(tableLocation);
         builder.append("\nDATA LOCATION\n");
         builder.append(dataLocation);
+        builder.append("\nTABLE TYPE\n");
+        builder.append(type);
         
         return builder.toString();
     }

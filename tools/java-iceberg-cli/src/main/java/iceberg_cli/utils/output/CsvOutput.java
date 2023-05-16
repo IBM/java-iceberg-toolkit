@@ -1,8 +1,8 @@
 /**
- * (c) Copyright IBM Corp. 2023. All Rights Reserved.
+ * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.utils.output;
+package iceberg_cli.utils.output;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,26 +11,9 @@ import java.util.Map;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
 
-import iceberg.utils.DataConversion;
+import iceberg_cli.utils.DataConversion;
 
 public class CsvOutput extends Output {
-
-    @Override
-    public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
-            Schema schema, String tableLocation, String dataLocation) throws Exception {
-        StringBuilder builder = new StringBuilder();
-        builder.append(tableFiles(planFileTasks));
-        builder.append("SNAPSHOT\n");
-        builder.append(currentSnapshot(snapshot));
-        builder.append("\nSCHEMA\n");
-        builder.append(tableSchema(schema));
-        builder.append("\nTABLE LOCATION\n");
-        builder.append(tableLocation);
-        builder.append("\nDATA LOCATION\n");
-        builder.append(dataLocation);
-        
-        return builder.toString();
-    }
 
     @Override
     public String listTables(List<String> tables) throws Exception {
@@ -47,7 +30,7 @@ public class CsvOutput extends Output {
         StringBuilder builder = new StringBuilder();
         if (namespace_location != null) {
             for (String nmspc : namespace_location)
-                builder.append(String.format("%s,\n", nmspc));
+                builder.append(String.format("%s,", nmspc));
         }
         return builder.toString();
     }

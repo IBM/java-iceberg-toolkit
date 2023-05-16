@@ -1,15 +1,13 @@
-package iceberg;
+package iceberg_cli;
 
 import java.io.UnsupportedEncodingException;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.NamespaceNotEmptyException;
-import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
-import org.apache.iceberg.TableMetadata;
 import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.hive.HiveSchemaUtil;
@@ -17,35 +15,53 @@ import java.util.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
+import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf.ConfVars;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.thrift.TException;
+
+import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.utils.Credentials;
 
 public class HiveConnector extends MetastoreConnector
 {
 
-    HiveConf hiveConf;
+    Configuration conf;
     HiveMetaStoreClient hiveClient;
     String database;
     String table;
     Table hiveTable;
     
-    public HiveConnector(String metastoreUri, String warehouse, String namespace, String tableName) throws MetaException {
-        super(metastoreUri, warehouse, namespace, tableName);
-        hiveConf = new HiveConf();
-        hiveConf.set("hive.metastore.local", "false");
-        hiveConf.setVar(HiveConf.ConfVars.METASTOREURIS, metastoreUri);
-        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
-            hiveConf.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
-        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
-            hiveConf.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
+    public HiveConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws MetaException, IOException {
+        super(catalog, namespace, tableName, creds);
         
-        hiveClient = new HiveMetaStoreClient(hiveConf);
+        // Get catalog configuration
+        conf = catalog.getConf();
+        
+        // Set credentials, if any
+        if (creds.isValid()) {
+            conf.set("fs.s3a.access.key", creds.getValue("AWS_ACCESS_KEY_ID"));
+            conf.set("fs.s3a.secret.key", creds.getValue("AWS_SECRET_ACCESS_KEY"));
+            
+            String endpoint = creds.getValue("ENDPOINT");
+            if(endpoint != null) {
+            	conf.set("fs.s3a.endpoint", endpoint);
+            	// Set path style access for non-aws endpoints
+            	conf.set("fs.s3a.path.style.access", "true");
+            }
+        }
+        
+        hiveClient = new HiveMetaStoreClient(conf);
         
         database = namespace;
         table = tableName;
@@ -55,41 +71,54 @@ public class HiveConnector extends MetastoreConnector
         hiveTable = hiveClient.getTable(database, table);
     }
     
+    public Table loadTable(String database, String table) throws Exception {
+        return hiveClient.getTable(database, table);
+    }
+    
     public void setTableIdentifier(String namespace, String tableName) {
         database = namespace;
         table = tableName;
     }
     
-    public String getTableType(String database, String table) throws Exception {
-        setTableIdentifier(database, table);
-        loadTable();
-        String tableType = hiveTable.getParameters().get("table_type");
+    private String type(Table table) {
+        String tableType = table.getParameters().get("table_type");
         if (tableType != null)
             return tableType;
-        return hiveTable.getTableType();
+        return table.getTableType();
+    }
+    
+    public String getTableType() throws Exception {
+        if (hiveTable == null)
+            loadTable();
+        return type(hiveTable);
+    }
+    
+    public String getTableType(String database, String table) throws Exception {
+        Table hiveTable = loadTable(database, table);
+        return type(hiveTable);
     }
 
     @Override
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public boolean dropTable() throws Exception {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public List<List<String>> readTable() throws Exception, UnsupportedEncodingException {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     private List<FileStatus> getFilesListRecursively(String location) throws IOException, URISyntaxException {
         List<FileStatus> files = new ArrayList<FileStatus>();
-        FileSystem fs = FileSystem.get(new URI(location), hiveConf);
+        FileSystem fs = FileSystem.get(new URI(location), conf);
         FileStatus[] fileStatus = fs.listStatus(new Path(location));
 
         for(FileStatus status : fileStatus) {
@@ -136,6 +165,11 @@ public class HiveConnector extends MetastoreConnector
          
          return taskMapListList;
     }
+    
+    @Override
+    public Map<Integer, List<Map<String, String>>> getPlanTasks() throws IOException, URISyntaxException {
+        return getPlanFiles();
+    }
 
     @Override
     public List<String> listTables(String namespace) throws MetaException {
@@ -157,39 +191,44 @@ public class HiveConnector extends MetastoreConnector
     
     @Override
     public boolean createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException {
-        // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        // Get warehouse path
+        String warehouse = hiveClient.getConfigValue(HiveConf.ConfVars.METASTOREWAREHOUSE.varname, null);
+        Database database = new Database(namespace.toString(), null, warehouse, new HashMap<String, String>());
+        hiveClient.createDatabase(database);
+        System.out.println("Namespace " + namespace + " created");
+        
+        return true;
     }
     
     @Override
     public boolean dropNamespace(Namespace namespace) throws Exception, NamespaceNotEmptyException {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
     
     @Override
     public boolean renameTable(TableIdentifier from, TableIdentifier to) throws Exception, NoSuchTableException, AlreadyExistsException {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
     
     @Override
     public String getUUID() throws Exception {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public String getTableLocation() throws Exception {
         if (hiveTable == null)
             loadTable();
-
+        
         return hiveTable.getSd().getLocation();
     }
 
     @Override
     public String getTableDataLocation() throws Exception {
-        return getTableLocation();
+        return null;
     }
 
     @Override
@@ -205,25 +244,26 @@ public class HiveConnector extends MetastoreConnector
     @Override
     public PartitionSpec getSpec() throws Exception {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public Iterable<Snapshot> getListOfSnapshots() throws Exception {
-        return new ArrayList<Snapshot>();
+        // TODO Auto-generated method stub
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public String writeTable(String record, String outputFile) throws Exception, UnsupportedEncodingException {
         // TODO Auto-generated method stub
         // Where outputFile can be null
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
     public boolean commitTable(String dataFileName) throws Exception {
         // TODO Auto-generated method stub
-        throw new Exception("Hive functionaility not supported yet.");
+        throw new Exception("Hive functionality not supported yet.");
     }
 
     @Override
@@ -232,10 +272,8 @@ public class HiveConnector extends MetastoreConnector
         try {
              schema = hiveClient.getSchema(database, table);
         } catch (TException e) {
-            System.err.println(e.getMessage());
             return null;
         }
         return HiveSchemaUtil.convert(schema);
     }
-    
 }

@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.utils.output;
+package iceberg_cli.utils.output;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,13 +15,28 @@ import org.apache.iceberg.Snapshot;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import iceberg.utils.DataConversion;
+import iceberg_cli.utils.DataConversion;
 
 public class JsonOutput extends Output{
+    
+    @Override
+    public String tableMetadata(Snapshot snapshot, Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
+        JSONObject tableMetadata = new JSONObject();
+        
+        JSONObject schemaObject = new JSONObject(tableSchema(schema));
+        JSONObject currentSnapshot = new JSONObject(currentSnapshot(snapshot));
+        tableMetadata.put("snapshot", currentSnapshot.get("snapshot"));
+        tableMetadata.put("schema", schemaObject.get("schema"));
+        tableMetadata.put("tableLocation", tableLocation);
+        tableMetadata.put("dataLocation", dataLocation);
+        tableMetadata.put("tableType", type);
+                
+        return tableMetadata.toString();
+    }
 
     @Override
     public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
-            Schema schema, String tableLocation, String dataLocation) throws Exception {
+            Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
         JSONObject tableDetails = new JSONObject();
         
         JSONObject dataFiles = new JSONObject(tableFiles(planFileTasks));
@@ -32,6 +47,7 @@ public class JsonOutput extends Output{
         tableDetails.put("schema", schemaObject.get("schema"));
         tableDetails.put("tableLocation", tableLocation);
         tableDetails.put("dataLocation", dataLocation);
+        tableDetails.put("tableType", type);
                 
         return tableDetails.toString();
     }

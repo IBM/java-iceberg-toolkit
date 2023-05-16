@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.cli;
+package iceberg_cli.cli;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,8 +10,8 @@ import java.util.Map;
 
 import org.apache.commons.cli.*;
 
-import iceberg.cli.commands.Command;
-import iceberg.cli.commands.Parameter;
+import iceberg_cli.cli.commands.Command;
+import iceberg_cli.cli.commands.Parameter;
 
 public class SubcommandParser {
     private Map<String, String> m_positionalArgs;
@@ -63,30 +63,6 @@ public class SubcommandParser {
         parsePositionalArgs(command, remainingArgs, index);
         // Parse and validate identifier
         parseIdentifier();
-        switch (subCommand) {
-            case "list":
-                break;
-            case "describe":
-            case "drop":
-            case "create":
-                validateNamespace();
-                break;
-            case "files":
-            case "snapshot":
-            case "read":
-            case "schema":
-            case "spec":
-            case "uuid":
-            case "rename":
-            case "commit":
-            case "write":
-            case "location":
-            case "type":
-                validateTable();
-                break;
-            case "default":
-                System.err.println("Invalid command");
-        }
     }
 
     /**
@@ -118,16 +94,6 @@ public class SubcommandParser {
         } else {
             m_namespace = identifier;
         }
-    }
-
-    private void validateNamespace() throws ParseException {
-        if (m_namespace == null)
-            throw new ParseException("Missing identifier");
-    }
-
-    private void validateTable() throws ParseException {
-        if (m_namespace == null || m_table == null)
-            throw new ParseException("Missing identifier");
     }
 
     private void parsePositionalArgs(Command command, String[] subCommand, int startIndex) throws ParseException {

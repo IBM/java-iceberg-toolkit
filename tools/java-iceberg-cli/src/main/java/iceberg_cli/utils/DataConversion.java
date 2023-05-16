@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.utils;
+package iceberg_cli.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
