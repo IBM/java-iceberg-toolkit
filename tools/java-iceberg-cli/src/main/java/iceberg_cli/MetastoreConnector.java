@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg;
+package iceberg_cli;
 
 import java.util.*;
 import java.io.IOException;
@@ -26,18 +26,24 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.types.Types.UUIDType;
 import org.apache.thrift.TException;
+
+import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.utils.Credentials;
+
 import org.apache.iceberg.PartitionField;
 
 public abstract class MetastoreConnector 
 {
     protected Long m_snapshotId = null;
 
-    public MetastoreConnector(String metastoreUri, String warehouse, String namespace, String tableName) {
+    public MetastoreConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) {
     }
     
     public abstract void setTableIdentifier(String namespace, String tableName);
             
     public abstract void loadTable() throws Exception;
+    
+    public abstract String getTableType() throws Exception;
     
     public abstract String getTableType(String database, String table) throws Exception;
     
@@ -50,6 +56,8 @@ public abstract class MetastoreConnector
     public abstract List<List<String>> readTable() throws Exception, UnsupportedEncodingException;
 
     public abstract Map<Integer, List<Map<String, String>>> getPlanFiles() throws IOException, URISyntaxException;
+    
+    public abstract Map<Integer, List<Map<String, String>>> getPlanTasks() throws IOException, URISyntaxException;
 
     public abstract String getTableLocation() throws Exception;
 
@@ -80,7 +88,7 @@ public abstract class MetastoreConnector
     public abstract PartitionSpec getSpec() throws Exception;
     
     public abstract String getUUID()  throws Exception;
-    
+
     public void setSnapshotId(Long snapshotId) {
         this.m_snapshotId = snapshotId;
     }

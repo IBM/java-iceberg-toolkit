@@ -1,13 +1,8 @@
 /**
- * (c) Copyright IBM Corp. 2023. All Rights Reserved.
+ * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.utils;
-
-import iceberg.HiveConnector;
-import iceberg.IcebergConnector;
-import iceberg.MetastoreConnector;
-import iceberg.utils.output.*;
+package iceberg_cli.utils;
 
 import java.util.*;
 
@@ -16,6 +11,11 @@ import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.PartitionSpec;
 import org.json.JSONObject;
+
+import iceberg_cli.HiveConnector;
+import iceberg_cli.IcebergConnector;
+import iceberg_cli.MetastoreConnector;
+import iceberg_cli.utils.output.*;
 
 /**
  * 
@@ -44,6 +44,20 @@ public class PrintUtils {
     }
     
     /**
+     * Get table metadata from MetastoreConnector and return to the user is the given format
+     * @throws Exception 
+     */
+    public String printTableMetadata() throws Exception {
+        Snapshot snapshot = metaConn.getCurrentSnapshot();
+        Schema targetSchema = metaConn.getTableSchema();
+        String tableLocation = metaConn.getTableLocation();
+        String dataLocation = metaConn.getTableDataLocation();
+        String type = metaConn.getTableType();
+        
+        return output.tableMetadata(snapshot, targetSchema, tableLocation, dataLocation, type);
+    }
+    
+    /**
      * Get table details from MetastoreConnector and output to the user is the given format
      * @throws Exception 
      */
@@ -53,15 +67,13 @@ public class PrintUtils {
         Schema targetSchema = metaConn.getTableSchema();
         String tableLocation = metaConn.getTableLocation();
         String dataLocation = metaConn.getTableDataLocation();
+        String type = metaConn.getTableType();
         
-        return output.tableDetails(planFileTasks, snapshot, targetSchema, tableLocation, dataLocation);
+        return output.tableDetails(planFileTasks, snapshot, targetSchema, tableLocation, dataLocation, type);
     }
     
     /**
      * Get list of tables in all namespaces
-     * @param namespace
-     * @param uri
-     * @param warehouse
      * @throws Exception 
      */
     public String printAllTables() throws Exception {
@@ -71,15 +83,13 @@ public class PrintUtils {
             String namespaceName = namespace.toString();
             tables.put(namespaceName, metaConn.listTables(namespaceName));
         }
-
+        
         return output.listAllTables(tables);
     }
-
+    
     /**
      * Get list of tables in a namespace in the user specified format
      * @param namespace
-     * @param uri
-     * @param warehouse
      * @throws Exception 
      */
     public String printTables(String namespace) throws Exception {
@@ -133,6 +143,29 @@ public class PrintUtils {
         String outputString = null;
         
         String planFiles = output.tableFiles(metaConn.getPlanFiles());
+        Long snapshotId = metaConn.getCurrentSnapshotId();
+        switch (format) {
+            case "json":
+                JSONObject filesAsJson = new JSONObject(planFiles);
+                filesAsJson.put("snaphotId", snapshotId);
+                outputString = filesAsJson.toString();
+                break;
+            default:
+                StringBuilder builder = new StringBuilder(String.format("SNAPSHOT ID : %d\n", snapshotId));
+                builder.append(planFiles);
+                outputString = builder.toString();
+        }
+        return outputString;
+    }
+    
+    /**
+     * Get all table files from MetastoreConnector and output to the user is the given format
+     * @throws Exception 
+     */
+    public String printTasks() throws Exception {
+        String outputString = null;
+        
+        String planFiles = output.tableFiles(metaConn.getPlanTasks());
         Long snapshotId = metaConn.getCurrentSnapshotId();
         switch (format) {
             case "json":

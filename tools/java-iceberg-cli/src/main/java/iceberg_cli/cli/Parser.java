@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.cli;
+package iceberg_cli.cli;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,7 +10,7 @@ import java.util.Map;
 
 import org.apache.commons.cli.ParseException;
 
-import iceberg.cli.commands.Command;
+import iceberg_cli.cli.commands.Command;
 
 public class Parser {
     private Map<String, Command> m_commands;
@@ -44,13 +44,9 @@ public class Parser {
 
     // Fetch command
     public String command() { return m_command.name(); }
-
-    // Get options
-    public String uri() { return optParser.uri(); }
-    public String warehouse() { return optParser.warehouse(); }
-    public String tableFormat() { return optParser.tableFormat(); }
-    public String outputFormat() { return optParser.outputFormat(); }
-    public String snapshotId() { return optParser.snapshotId(); }
+    
+    // Get OptionsParser
+    public OptionsParser optParser() { return optParser; }
 
     // Get arguments
     public String outputFile() { return cmdParser.outputFile(); }
@@ -112,10 +108,21 @@ public class Parser {
         location.addArgument("identifier", "Table identifier", true);
         m_commands.put("location", location);
         
+        Command metadata = new Command("metadata", "Get table metadata");
+        metadata.addOption("--help", "Show this help message and exit");
+        metadata.addArgument("identifier", "Table identifier", true);
+        m_commands.put("metadata", metadata);
+        
         Command read = new Command("read", "Read from a table");
         read.addOption("--help", "Show this help message and exit");
         read.addArgument("identifier", "Table identifier", true);
         m_commands.put("read", read);
+        
+        Command rename = new Command("rename", "Rename a table a table");
+        rename.addOption("--help", "Show this help message and exit");
+        rename.addArgument("identifier", "Table identifier", true);
+        rename.addArgument("to_identifier", "New table identifier", true);
+        m_commands.put("rename", rename);
         
         Command schema = new Command("schema", "Fetch schema of a table");
         schema.addOption("--help", "Show this help message and exit");
@@ -128,17 +135,15 @@ public class Parser {
         snapshot.addArgument("identifier", "Table identifier", true);
         m_commands.put("snapshot", snapshot);
         
-        Command write = new Command("write", "Write to a table");
-        write.addOption("--help", "Show this help message and exit");
-        write.addOption("--output-file", "Output file location");
-        write.addArgument("identifier", "Table identifier", true);
-        write.addArgument("records", "Json string of records to write to a table", true);
-        m_commands.put("write", write);
-        
         Command spec = new Command("spec", "Fetch partition spec of a table");
         spec.addOption("--help", "Show this help message and exit");
         spec.addArgument("identifier", "Table identifier", true);
         m_commands.put("spec", spec);
+        
+        Command tasks = new Command("tasks", "List scan tasks of a table");
+        tasks.addOption("--help", "Show this help message and exit");
+        tasks.addArgument("identifier", "Table identifier", true);
+        m_commands.put("tasks", tasks);
         
         Command type = new Command("type", "Fetch table type");
         type.addOption("--help", "Show this help message and exit");
@@ -150,10 +155,11 @@ public class Parser {
         uuid.addArgument("identifier", "Table identifier", true);
         m_commands.put("uuid", uuid);
         
-        Command rename = new Command("rename", "Rename a table a table");
-        rename.addOption("--help", "Show this help message and exit");
-        rename.addArgument("identifier", "Table identifier", true);
-        rename.addArgument("to_identifier", "New table identifier", true);
-        m_commands.put("rename", rename);
+        Command write = new Command("write", "Write to a table");
+        write.addOption("--help", "Show this help message and exit");
+        write.addOption("--output-file", "Output file location");
+        write.addArgument("identifier", "Table identifier", true);
+        write.addArgument("records", "Json string of records to write to a table", true);
+        m_commands.put("write", write);
     }
 }

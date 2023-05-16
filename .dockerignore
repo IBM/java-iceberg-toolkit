@@ -1,0 +1,7 @@
+**/.git
+**/.DS_Store
+**/.classpath
+**/.project
+**/.settings
+tools/java_iceberg_cli/dependency-reduced-pom.xml
+tools/java_iceberg_cli/target

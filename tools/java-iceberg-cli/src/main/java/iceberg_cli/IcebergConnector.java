@@ -2,9 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg;
-
-import iceberg.utils.DataConversion;
+package iceberg_cli;
 
 import java.util.*;
 import java.io.File;
@@ -13,6 +11,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
@@ -23,7 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.shaded.com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.CombinedScanTask;
 import org.apache.iceberg.DataFile;
@@ -62,58 +62,68 @@ import org.apache.parquet.hadoop.Footer;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.parquet.io.InputFile;
-import org.apache.thrift.TException;
 import org.apache.iceberg.TableMetadata;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.common.io.Files;
-import com.amazonaws.regions.Regions;
 
+import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.utils.Credentials;
+import iceberg_cli.utils.DataConversion;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 public class IcebergConnector extends MetastoreConnector
 {
     HiveCatalog m_catalog;
     TableIdentifier m_tableIdentifier;
+    Credentials creds;
     Table iceberg_table;
     TableScan m_scan;
 
-    public IcebergConnector(String metastoreUri, String warehouse, String namespace, String tableName) {
+    public IcebergConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws IOException {
         // TODO: Get type of catalog that the user wants and then initialize accordingly
-        super(metastoreUri, warehouse, namespace, tableName);
-        initCatalog(metastoreUri, warehouse);
+        super(catalog, namespace, tableName, creds);
+        
+        // Initialize members
+        this.creds = creds;
+        initCatalog(catalog);
         if (tableName != null)
             setTableIdentifier(namespace, tableName);
     }
     
-    private void initCatalog(String metastoreUri, String warehouse) {
+    private void initCatalog(CustomCatalog catalog) throws IOException {
         m_catalog = new HiveCatalog();
         
-        // Set Hadoop configuration
-        Configuration config = new Configuration();
-        if (System.getenv("AWS_ACCESS_KEY_ID") != null)
-            config.set("fs.s3a.access.key", System.getenv("AWS_ACCESS_KEY_ID"));
-        if (System.getenv("AWS_SECRET_ACCESS_KEY") != null)
-            config.set("fs.s3a.secret.key", System.getenv("AWS_SECRET_ACCESS_KEY"));
-        if (warehouse != null)
-            config.set("hive.metastore.warehouse.dir", warehouse);
-        m_catalog.setConf(config);
+        // Get catalog configuration
+        Configuration conf = catalog.getConf();
+        // Set credentials, if any
+        if (creds.isValid()) {
+            conf.set("fs.s3a.access.key", creds.getValue("AWS_ACCESS_KEY_ID"));
+            conf.set("fs.s3a.secret.key", creds.getValue("AWS_SECRET_ACCESS_KEY"));
+            
+            String endpoint = creds.getValue("ENDPOINT");
+            if(endpoint != null) {
+            	conf.set("fs.s3a.endpoint", endpoint);
+            	// Set path style access for non-aws endpoints
+            	conf.set("fs.s3a.path.style.access", "true");
+            }
+        }
+        m_catalog.setConf(conf);
         
-        // Set properties
-        Map <String, String> properties = new HashMap<String, String>();
-        properties.put("uri", metastoreUri);
+        // Get catalog properties
+        Map <String, String> properties = catalog.getProperties();
         properties.put("list-all-tables", "true");
-        if (warehouse != null)
-            properties.put("warehouse", warehouse);
-        
+                
         // Initialize Hive catalog
         m_catalog.initialize("hive", properties);
     }
@@ -121,7 +131,7 @@ public class IcebergConnector extends MetastoreConnector
     public void setTableIdentifier(String namespace, String tableName) {
         m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
-
+    
     public Table loadTable(TableIdentifier identifier) {
         // Check if the table exists
         if (!m_catalog.tableExists(identifier)) {
@@ -182,9 +192,12 @@ public class IcebergConnector extends MetastoreConnector
         
         // Get records
         System.out.println("Records in " + m_tableIdentifier + " :");
-        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(iceberg_table);
         // Use specified snapshot, latest by default
-        CloseableIterable<Record> records = scanBuilder.useSnapshot(m_scan.snapshot().snapshotId()).build();
+        Long snapshotId = getCurrentSnapshotId();
+        if (snapshotId == null)
+            return new ArrayList<List<String>>();
+        IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(iceberg_table);
+        CloseableIterable<Record> records = scanBuilder.useSnapshot(snapshotId).build();
         List<List<String>> output = new ArrayList<List<String>>();
         for (Record record : records) {
             int numFields = record.size();
@@ -199,7 +212,40 @@ public class IcebergConnector extends MetastoreConnector
         return output;
     }
 
+    /**
+     * Returns list of tasks with single data files
+     */
     public Map<Integer, List<Map<String, String>>> getPlanFiles() {
+        if (iceberg_table == null)
+            loadTable();
+        
+        Iterable<FileScanTask> scanTasks = m_scan.planFiles();
+        Map<Integer, List<Map<String, String>>> tasks = new HashMap<Integer, List<Map<String, String>>>();
+        int index = 0;
+        for (FileScanTask scanTask : scanTasks) {
+            List<Map<String, String>> taskMapList = new ArrayList<Map<String, String>>();
+            Map<String, String> taskMap = new HashMap<String, String>();
+            DataFile file = scanTask.file();
+            taskMap.put("content", file.content().toString());
+            taskMap.put("file_path", file.path().toString());
+            taskMap.put("file_format", file.format().toString());
+            taskMap.put("start", Long.toString(scanTask.start()));
+            taskMap.put("length", Long.toString(scanTask.length()));
+            taskMap.put("spec", scanTask.spec().toString());
+            taskMap.put("residual", scanTask.residual().toString());
+            taskMapList.add(taskMap);
+            
+            tasks.put(index++, taskMapList);
+        }
+        
+        return tasks;
+    }
+    
+    /**
+     * Returns list of balanced tasks which may have partial data files,
+     * multiple data files or both.
+     */
+    public Map<Integer, List<Map<String, String>>> getPlanTasks() {
         if (iceberg_table == null)
             loadTable();
         
@@ -240,7 +286,6 @@ public class IcebergConnector extends MetastoreConnector
         System.out.println("Namespace " + namespace + " created");
         
         return true;
-        
     }
     
     public boolean dropNamespace(Namespace namespace) throws NamespaceNotEmptyException {
@@ -306,7 +351,7 @@ public class IcebergConnector extends MetastoreConnector
     public Snapshot getCurrentSnapshot() {
         if (iceberg_table == null)
             loadTable();
-
+        
         return m_scan.snapshot();
     }
     
@@ -329,7 +374,31 @@ public class IcebergConnector extends MetastoreConnector
         return snapshots;
     }
     
-    public String writeTable(String records, String outputFile) throws IOException {
+    public S3FileIO initS3FileIO() {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
+                creds.getValue("AWS_ACCESS_KEY_ID"),
+                creds.getValue("AWS_SECRET_ACCESS_KEY"));
+
+        SdkHttpClient client = ApacheHttpClient.builder()
+                .maxConnections(100)
+                .build();
+        
+        SerializableSupplier<S3Client> supplier = () -> { 
+            S3ClientBuilder clientBuilder = S3Client.builder()
+                .region(Region.of(creds.getValue("AWS_REGION")))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .httpClient(client);
+            String uri = creds.getValue("ENDPOINT");
+            if (uri != null) {
+                clientBuilder.endpointOverride(URI.create(uri));
+            }
+            return clientBuilder.build();
+        };
+        
+        return  new S3FileIO(supplier);
+    }
+    
+    public String writeTable(String records, String outputFile) throws Exception {
         if (iceberg_table == null)
             loadTable();
         
@@ -354,7 +423,7 @@ public class IcebergConnector extends MetastoreConnector
             // Verify if input columns are the same number as the required fields
             // Optional fields shouldn't be part of the check
             if (fieldNames.length > columns.size()) 
-                throw new IllegalArgumentException("Record has invalid number of fields");
+                throw new IllegalArgumentException("Number of fields in the record doesn't match the number of required columns in schema.\n");
             
             Record genericRecord = GenericRecord.create(schema);
             for (Types.NestedField col : columns) {
@@ -370,32 +439,18 @@ public class IcebergConnector extends MetastoreConnector
                 
                 // Trim the input value
                 String value = fields.get(colName).toString().trim();
-                
+
                 // Check for null values
                 if (col.isRequired() && value.equalsIgnoreCase("null"))
                     throw new IllegalArgumentException("Required field cannot be null: " + colName);
-                
+
                 // Store the value as an iceberg data type
                 genericRecord.setField(colName, DataConversion.stringToIcebergType(value, colType));
             }
             builder.add(genericRecord.copy());
         }
-                                            
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
-                System.getenv("AWS_ACCESS_KEY_ID"),
-                System.getenv("AWS_SECRET_ACCESS_KEY"));
-    
-        SdkHttpClient client = ApacheHttpClient.builder()
-                .maxConnections(100)
-                .build();
-            
-        SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
-                .region(Region.of(System.getenv("AWS_REGION")))
-                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                .httpClient(client)
-                .build();
 
-        S3FileIO io = new S3FileIO(supplier);
+        S3FileIO io = initS3FileIO();
         OutputFile location = io.newOutputFile(outputFile);
         System.out.println("New file created at: " + location);
                     
@@ -421,7 +476,6 @@ public class IcebergConnector extends MetastoreConnector
         return result.toString();
     }
     
-    //helper...there is a getString(key, default) function online but not available to our version of jdk it seems
     String getJsonStringOrDefault(JSONObject o, String key, String defVal) {
     	try {
     		return o.getString(key);
@@ -429,7 +483,7 @@ public class IcebergConnector extends MetastoreConnector
     		return defVal;
     	}
     }
-
+    
     Long getJsonLongOrDefault(JSONObject o, String key, Long defVal) {
     	try {
     		return o.getLong(key);
@@ -437,30 +491,16 @@ public class IcebergConnector extends MetastoreConnector
     		return defVal;
     	}
     }
-
+    
     public boolean commitTable(String dataFiles) throws Exception {
         if (iceberg_table == null)
             loadTable();
         
-        System.out.println("Commiting to the table " + m_tableIdentifier);
+        System.out.println("Commiting to the Iceberg table");
         
         PartitionSpec ps = iceberg_table.spec();
-
-        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(
-                System.getenv("AWS_ACCESS_KEY_ID"),
-                System.getenv("AWS_SECRET_ACCESS_KEY"));
-
-        SdkHttpClient client = ApacheHttpClient.builder()
-                .maxConnections(100)
-                .build();
-
-        SerializableSupplier<S3Client> supplier = () -> S3Client.builder()
-                .region(Region.of(System.getenv("AWS_REGION")))
-                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
-                .httpClient(client)
-                .build();
         
-        S3FileIO io = new S3FileIO(supplier);
+        S3FileIO io = initS3FileIO();
         
         JSONArray files = new JSONObject(dataFiles).getJSONArray("files");
         Transaction transaction = iceberg_table.newTransaction();
@@ -472,12 +512,12 @@ public class IcebergConnector extends MetastoreConnector
             // Required
             String filePath = file.getString("file_path");
             OutputFile outputFile = io.newOutputFile(filePath);
-            
+
             // Optional (but slower if not given)
             String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
             Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
             Long numRecords = getJsonLongOrDefault(file, "record_count", null);
-
+            
             if(fileFormatStr == null) {
             	// if file format is not provided, we'll try to infer from the file extension (if any)
             	String fileLocation = outputFile.location();
@@ -486,7 +526,7 @@ public class IcebergConnector extends MetastoreConnector
             	else
             		fileFormatStr = "";
             }
-
+            
             FileFormat fileFormat = null;
             if(fileFormatStr.isEmpty())
             	throw new Exception("Unable to infer the file format of the file to be committed: " + outputFile.location());
@@ -494,7 +534,7 @@ public class IcebergConnector extends MetastoreConnector
             	fileFormat = FileFormat.PARQUET;
             else
             	throw new Exception("Unsupported file format " + fileFormatStr + " cannot be committed: " + outputFile.location());
-
+            
             if(fileSize == null) {
             	try {
             		FileSystem fs = FileSystem.get(new URI(outputFile.location()), m_catalog.getConf());
@@ -504,7 +544,7 @@ public class IcebergConnector extends MetastoreConnector
             		throw new Exception("Unable to infer the filesize of the file to be committed: " + outputFile.location());
             	}
             }
-
+            	
             if (numRecords == null) {
             	try {
                 	/* The apache parquet reader code wants a type of apache.parquet.io.InputFile, however the iceberg apis have no way
@@ -524,7 +564,7 @@ public class IcebergConnector extends MetastoreConnector
             		pifMthd.setAccessible(true);
             		org.apache.iceberg.io.InputFile pif = io.newInputFile(outputFile.location());
             		Object parquetInputFile = pifMthd.invoke(pifInst, pif);
-
+            	
             		ParquetFileReader reader = ParquetFileReader.open((InputFile) parquetInputFile);
             		numRecords = reader.getRecordCount();
             	} catch (Exception e) {
@@ -555,12 +595,17 @@ public class IcebergConnector extends MetastoreConnector
         return m_scan.schema();
     }
     
-    public String getTableType(String database, String table) throws Exception {
-        setTableIdentifier(database, table);
-        loadTable();
+    public String getTableType() throws Exception {
         if (iceberg_table == null) {
-            return null;
+            loadTable();
         }
+        
+        return "ICEBERG";
+    }
+    
+    public String getTableType(String database, String table) throws Exception {
+        loadTable(TableIdentifier.of(database, table));
+        // No exception would be thrown if the table loaded successfully
         return "ICEBERG";
     }
     
@@ -571,11 +616,9 @@ public class IcebergConnector extends MetastoreConnector
         }
     }
     
-    @SuppressWarnings("serial")
     public class TableNotLoaded extends RuntimeException {
         public TableNotLoaded(String message) {
             super(message);
         }
     }
-    
 }

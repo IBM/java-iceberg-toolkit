@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2023. All Rights Reserved.
  */
 
-package iceberg;
+package iceberg_cli;
 
 public class Main {
     public static void main( String[] args ) {

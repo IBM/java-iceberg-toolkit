@@ -2,7 +2,7 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.cli.commands;
+package iceberg_cli.cli.commands;
 
 import java.util.ArrayList;
 import java.util.List;

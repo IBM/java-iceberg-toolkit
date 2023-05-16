@@ -2,13 +2,13 @@
  * (c) Copyright IBM Corp. 2022. All Rights Reserved.
  */
 
-package iceberg.cli;
-
-import iceberg.cli.commands.*;
+package iceberg_cli.cli;
 
 import java.util.Map;
 
 import org.apache.commons.cli.*;
+
+import iceberg_cli.cli.commands.*;
 
 public class OptionsParser {
     private String m_uri;
@@ -16,6 +16,8 @@ public class OptionsParser {
     private String m_outputFormat;
     private String m_tableFormat;
     private String m_snapshotId;
+    private String m_catalog;
+    private String m_credentials;
 
     public OptionsParser() {
         m_uri = null;
@@ -23,6 +25,8 @@ public class OptionsParser {
         m_outputFormat = "console";
         m_tableFormat = "iceberg";
         m_snapshotId = null;
+        m_catalog = "default";
+        m_credentials = null;
     }
     
     /**
@@ -51,9 +55,11 @@ public class OptionsParser {
     public void parseOptions(Map<String, Command> commands, String[] args) throws ParseException {
         Options options = new Options();
         options.addOption(Option.builder("h").longOpt("help").desc("Show this help message").build());
+        options.addOption(Option.builder("c").longOpt("credential").argName("credentials").hasArg().desc("Supported credentials : AWS").build());
         options.addOption(Option.builder("u").longOpt("uri").argName("value").hasArg().desc("Hive metastore to use").build());
         options.addOption(Option.builder("w").longOpt("warehouse").argName("value").hasArg().desc("Table location").build());
         options.addOption(Option.builder("o").longOpt("output").argName("console|csv|json").hasArg().desc("Show output in this format").build());
+        options.addOption(Option.builder().longOpt("catalog").argName("value").hasArg().desc("Read properties for this catalog from the config file").build());
         options.addOption(Option.builder().longOpt("format").argName("iceberg|hive").hasArg().desc("The format of the table we want to display").build());
         options.addOption(Option.builder().longOpt("snapshot").argName("snapshot ID").hasArg().desc("Snapshot ID to use").build());
         
@@ -77,10 +83,16 @@ public class OptionsParser {
                     m_outputFormat = cmd.getOptionValue("o");
                 // Get table format
                 if (cmd.hasOption("format"))
-                    m_tableFormat = cmd.getOptionValue("format");
+                    m_tableFormat = cmd.getOptionValue("format").toUpperCase();
                 // Get snapshot id
                 if (cmd.hasOption("snapshot"))
                     m_snapshotId = cmd.getOptionValue("snapshot");
+                // Get credentials
+                if (cmd.hasOption("credential"))
+                    m_credentials = cmd.getOptionValue("credential");
+                // Get catalog name
+                if (cmd.hasOption("catalog"))
+                    m_catalog = cmd.getOptionValue("catalog");
             }
          
         } catch (ParseException exp) {
@@ -95,4 +107,6 @@ public class OptionsParser {
     public String tableFormat() { return m_tableFormat; }
     public String outputFormat() { return m_outputFormat; }
     public String snapshotId() { return m_snapshotId; }
+    public String credentials() { return m_credentials; }
+    public String catalog() { return m_catalog; }
 }
