@@ -16,13 +16,8 @@ case "$1" in
     ;;
 esac
 
-if [ "$EUID" -ne 0 ]; then
-    echo "Error: root privileges required"
-    exit 1
-fi
-
-buildah rmi -f java-iceberg-cli:latest
-buildah bud --tag java-iceberg-cli:latest --file Dockerfile .
+podman rmi -f java-iceberg-cli:latest
+podman build --tag java-iceberg-cli:latest --file Dockerfile .
 if [[ $? -eq 0 ]]; then
     echo "java-iceberg-cli container image build succeeded"
 else
