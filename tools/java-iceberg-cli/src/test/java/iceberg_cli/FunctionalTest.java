@@ -42,7 +42,7 @@ class FunctionalTest {
     static Credentials creds;
     static MetastoreConnector metaConn;
     static String namespace;
-    static String tablename;
+    static String tableName;
     static Integer total_tests = 7;
     static Integer passed_tests = 0;
     static ArrayList <String> failed_tests = new ArrayList<String>();
@@ -51,37 +51,33 @@ class FunctionalTest {
     static void setup() {
         String uri = System.getenv("URI");
         if (uri == null) {
-            System.out.println("URI environment variable not set");
+            System.out.println("Metastore \"URI\" environment variable not set, exiting...");
             System.exit(1);
             
         }
         String warehouse = System.getenv("WAREHOUSE");
-        if (warehouse == null) {
-            try {
-                warehouse = metaConn.loadNamespaceMetadata(Namespace.of("default")).get("location");
-            } catch (NoSuchNamespaceException e) {
-                System.err.println("WAREHOUSE environment variable not set and no default warehouse found");
-                System.exit(1);
-            } catch (Exception e) {
-                System.err.println("ERROR: " + e.getMessage());
-                System.exit(1);
-            }
-        }
-        
+        namespace = "test_setup" + UUID.randomUUID().toString().replace("-", "");
+        tableName = "test_table";
         try {
-            // Load catalog configuration
-            catalog = new ConfigLoader().init("default", uri, warehouse);
             // Do not ask for credentials from the user
             // Create a dummy credentials object instead which will be populated using env variables
             creds = new AwsCredentials(new JSONObject());
+            // Load catalog configuration
+            catalog = new ConfigLoader().init("default", uri, warehouse);
             // Initialize connector using a dummy credentials object
-            metaConn = new IcebergConnector(catalog, null, null, creds);
+            metaConn = new IcebergConnector(catalog, namespace, tableName, creds);
+            if (warehouse == null) {
+                warehouse = metaConn.loadNamespaceMetadata(Namespace.of("default")).get("location");
+                catalog.setProperty("warehouse", warehouse);
+                metaConn = new IcebergConnector(catalog, namespace, tableName, creds);
+            }
+        } catch (NoSuchNamespaceException e) {
+            System.err.println("WAREHOUSE environment variable not set and no default warehouse was found, exiting...");
+            System.exit(1);
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
+            System.exit(1);
         }
-                
-        namespace = "test_setup" + UUID.randomUUID().toString().replace("-", "");
-        tablename = "test_table";
         System.out.println("\n*** Starting Tests ***\n");
         System.out.println(String.valueOf(total_tests) + " Total Tests\n");
     }
@@ -108,7 +104,6 @@ class FunctionalTest {
     @DisplayName("Test the functionality of create table")
     void createtable() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
             Schema schema = SchemaParser.fromJson("{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}");
             
             System.out.println("Running test 2...");
@@ -127,7 +122,6 @@ class FunctionalTest {
     @DisplayName("Test the functionality of read on an empty table")
     void readEmptytable() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
             List<List<String>> expected = new ArrayList<List<String>>();
             
             System.out.println("Running test 3...");
@@ -137,7 +131,6 @@ class FunctionalTest {
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("reademptytable");
-            System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out))); 
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -147,7 +140,6 @@ class FunctionalTest {
     @DisplayName("Test the functionality of write table")
     void writetable() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
             String record = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
             
             System.out.println("Running test 4...");
@@ -167,7 +159,6 @@ class FunctionalTest {
     @DisplayName("Test the functionality of read table")
     void readtable() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
             List<List<String>> expected = Arrays.asList(Arrays.asList("1", "Testing", "1000.0", "2022-11-09T12:13:54.480"));
             
             System.out.println("Running test 5...");
@@ -186,8 +177,6 @@ class FunctionalTest {
     @DisplayName("Test the functionality of drop table")
     void droptable() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
-            
             System.out.println("Running test 6...");
             boolean status = metaConn.dropTable();
             Assertions.assertEquals(true, status);

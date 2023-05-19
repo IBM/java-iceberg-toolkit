@@ -25,7 +25,7 @@ import java.util.UUID;
 import javax.servlet.ServletException;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class UserInputConsole {
+class TestUserInputConsole {
     
     static String uri;
     static String warehouse;
@@ -39,7 +39,7 @@ class UserInputConsole {
     static void setup() {
         uri = System.getenv("URI");
         if (uri == null) {
-            System.out.println("URI environment variable not set");
+            System.out.println("Metastore \"URI\" environment variable not set, exiting...");
             System.exit(1);
             
         }
@@ -54,13 +54,11 @@ class UserInputConsole {
     @Order(1)
     @DisplayName("Test the functionality of createnamespace action")
     void createnamespace() throws ServletException {
-        String[] args = new String[6];
-        args[0] = "-u";
-        args[1] = uri;
-        args[2] = "-w";
-        args[3] = warehouse;
-        args[4] = "create";
-        args[5] = namespace;
+        String[] args;
+        if (warehouse == null)
+            args = new String[] {"-u", uri, "create", namespace};
+        else
+            args = new String[] {"-u", uri, "-w", warehouse, "create", namespace};
         
         try {
             System.out.println("Running test 1...");
@@ -78,13 +76,12 @@ class UserInputConsole {
     @Order(2)
     @DisplayName("Test the functionality of create action")
     void createtable() throws ServletException {
-        String[] args = new String[5];
-        args[0] = "-u";
-        args[1] = uri;
-        args[2] = "create";
-        args[3] = namespace + "." + tablename;
-        args[4] = "{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}";
-        
+        String[] args;
+        String schema = "{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}";
+        if (warehouse == null)
+            args = new String[] {"-u", uri, "create", namespace + "." + tablename, schema};
+        else
+            args = new String[] {"-u", uri, "-w", warehouse, "create", namespace + "." + tablename, schema};
         try {
             System.out.println("Running test 2...");
             String out = new IcebergApplication().processRequest(args);
@@ -101,12 +98,12 @@ class UserInputConsole {
     @Order(3)
     @DisplayName("Test the functionality of write action")
     void writetable() throws ServletException {
-        String[] args = new String[5];
-        args[0] = "-u";
-        args[1] = uri;
-        args[2] = "write";
-        args[3] = namespace + "." + tablename;
-        args[4] = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
+        String[] args;
+        String records = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
+        if (warehouse == null)
+            args = new String[] {"-u", uri, "write", namespace + "." + tablename, records};
+        else
+            args = new String[] {"-u", uri, "-w", warehouse, "write", namespace + "." + tablename, records};
         
         try {
             System.out.println("Running test 3...");
