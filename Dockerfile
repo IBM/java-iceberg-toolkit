@@ -13,10 +13,10 @@ RUN mkdir -p /opt/java \
 # Install Maven
 RUN mkdir -p /opt/maven \
     && cd /opt/maven \
-    && wget https://dlcdn.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz \
-    && tar xvzf apache-maven-3.8.8-bin.tar.gz \
-    && ln -s /opt/maven/apache-maven-3.8.8/bin/mvn /usr/bin/mvn \
-    && rm -f apache-maven-3.8.8-bin.tar.gz
+    && wget https://dlcdn.apache.org/maven/maven-3/3.9.2/binaries/apache-maven-3.9.2-bin.tar.gz \
+    && tar xvzf apache-maven-3.9.2-bin.tar.gz \
+    && ln -s /opt/maven/apache-maven-3.9.2/bin/mvn /usr/bin/mvn \
+    && rm -f apache-maven-3.9.2-bin.tar.gz
 
 # Install java-iceberg-cli
 COPY tools/java-iceberg-cli /home/java-iceberg-cli
