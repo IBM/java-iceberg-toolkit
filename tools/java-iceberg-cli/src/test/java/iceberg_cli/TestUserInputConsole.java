@@ -3,25 +3,14 @@ package iceberg_cli;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.apache.iceberg.catalog.Namespace;
-import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestMethodOrder;
-
-import iceberg_cli.*;
-
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.DisplayName;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.io.FileOutputStream;
-import java.io.FileDescriptor;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.UUID;
-
 import javax.servlet.ServletException;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
