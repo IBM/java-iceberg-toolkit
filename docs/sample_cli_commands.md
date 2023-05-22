@@ -107,7 +107,7 @@ Starting Txn
 Txn Complete!
 ```
 
-* Commit data files to a table. Table *test_table* in namespace *test* in this example.
+* Commit existing data files to a table. Table *test_table* in namespace *test* in this example.
 ```
 % java -jar <jar> -u <uri> commit test.test_table '{"files":[{"file_path":"<path1>"}, {"file_path":"<path2>"}]}'
 Commiting to the table test.test_table

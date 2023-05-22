@@ -1,18 +1,21 @@
 # java-iceberg-toolkit
-java-iceberg-toolkit is a Java implementation for performing operations on Apache Iceberg and Hive tables to enable open data lakehouse access to developers, data scientists and DB users. For more information, visit ["A java toolkit for Apache Iceberg open table format"](https://medium.com/@pandey.brajesh/a-java-toolkit-for-apache-iceberg-open-table-format-64c329d6c719). For a detailed list of supported operations, refer to [Supported Operations](/README.md#supported-operations).
+java-iceberg-toolkit is a Java implementation for performing operations on Apache Iceberg and Hive tables to enable open data lakehouse access to developers, data scientists and DB users. For a detailed list of supported operations, refer to [Supported Operations](/README.md#supported-operations).
+
+One of the common use-cases of the toolkit is bulk ingestion of parquet files to a data lake in Iceberg table format. For more information, visit ["A java toolkit for Apache Iceberg open table format"](https://medium.com/@pandey.brajesh/a-java-toolkit-for-apache-iceberg-open-table-format-64c329d6c719).
 
 **Table of Contents**
 * [Pre-Requisites](/README.md#pre-requisites)
 * [Install and Build](/README.md#install-and-build)
 * [Configuration](/README.md#configuration)
 * [CLI](/README.md#cli-2)
+* [Server Mode](/README.md#server-mode)
 * [API](/README.md#api)
 * [Limitations](/README.md#limitations)
 
 
 ## Pre-Requisites
 
-1. Hive Metastore setup
+1. Hive Metastore 4
 2. An object store (Amazon S3, IBM COS, etc.)
 3. Credentials to access the bucket (if not public), refer to [Configuration](/README.md#configuration)
 4. Java version 17 and above
@@ -260,6 +263,13 @@ List tables in all namespaces | Y |
 Read from a table | Y
 Rename a table | Y |
 Write to a table | Y |
+
+## Server Mode
+
+java-iceberg-toolkit provides a Server mode which uses UNIX domain sockets. To start the server run:
+```
+java -jar <jar> server
+```
 
 ## API
 
