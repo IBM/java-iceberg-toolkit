@@ -105,6 +105,11 @@ public class HiveConnector extends MetastoreConnector
     }
 
     @Override
+    public boolean alterTable(String newSchema) throws Exception {
+        throw new Exception("Hive functionality not supported yet.");
+    }
+
+    @Override
     public boolean dropTable() throws Exception {
         // TODO Auto-generated method stub
         throw new Exception("Hive functionality not supported yet.");

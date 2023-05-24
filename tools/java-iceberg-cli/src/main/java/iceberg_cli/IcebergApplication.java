@@ -165,6 +165,11 @@ public class IcebergApplication {
             else if (namespace != null)
                 output = "Operation successful? " + connector.dropNamespace(Namespace.of(namespace));
             break;
+        case "alter":
+            if (schemaJsonString == null)
+               throw new ParseException("Missing required argument: schema");
+            output = "Operation successful? " + connector.alterTable(schemaJsonString);
+            break;
         default:
             System.err.println("Error: Invalid action");
             break;
@@ -177,6 +182,7 @@ public class IcebergApplication {
         switch (action) {
             case "list":
                 break;
+            case "alter":
             case "describe":
             case "drop":
             case "create":

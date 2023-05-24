@@ -50,7 +50,9 @@ public abstract class MetastoreConnector
     public abstract List<String> listTables(String namespace) throws Exception;
         
     public abstract boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) throws Exception;
-    
+
+    public abstract boolean alterTable(String newSchema) throws Exception;
+
     public abstract boolean dropTable() throws Exception;
     
     public abstract List<List<String>> readTable() throws Exception, UnsupportedEncodingException;
