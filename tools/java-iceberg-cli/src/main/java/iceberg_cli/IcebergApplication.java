@@ -182,7 +182,6 @@ public class IcebergApplication {
         switch (action) {
             case "list":
                 break;
-            case "alter":
             case "describe":
             case "drop":
             case "create":
@@ -201,6 +200,7 @@ public class IcebergApplication {
             case "metadata":
             case "tasks":
             case "type":
+            case "alter":
                 validateNamespace(namespace);
                 validateTable(tableName);
                 break;
