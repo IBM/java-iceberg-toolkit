@@ -173,7 +173,113 @@ public class IcebergConnector extends MetastoreConnector
         
         return true;
     }
-    
+
+    /*
+     * Multiple operations can be performed simultaneously with the exception of DROP, which can
+     * be executed only by itself.
+     *
+     * The schema changes are expected in the following format:
+     * ADDING and RENAMING columns at the same time
+     * {
+     *  "add":[
+     *      {"name":"c4","type":"boolean"}
+     *   ],
+     *  "rename":[
+     *      {"name":"c2","newName":"col2"}
+     *   ]
+     * }
+     * DROPPING columns
+     * {
+     *  "drop":["c1","c2"]
+     * }
+     *
+     *
+     * There are more ALTER operations that can be performed according to the documentation,
+     * and since the argument comes as a JSON object, we can simply expand it here without any
+     * changes to the protocol itself.
+     */
+    public boolean alterTable(String newSchema) throws Exception {
+        final int OP_NONE = 0;
+        final int OP_ADD = 1;
+        final int OP_DROP = 2;
+        final int OP_RENAME = 4;
+        loadTable();
+        UpdateSchema updateSchema = iceberg_table.updateSchema();
+        JSONObject schemaSpecs =  new JSONObject(newSchema);
+        int op = OP_NONE;
+
+        // ADD NEW COLUMNS
+        try {
+            JSONArray newCols = schemaSpecs.getJSONArray("add");
+            for (int i = 0; i < newCols.length(); i++) {
+                try {
+                    JSONObject jo = newCols.getJSONObject(i);
+                    String name = jo.getString("name");
+                    String type = jo.getString("type");
+                    updateSchema.addColumn(name, Types.fromPrimitiveString(type));
+                    op |= OP_ADD;
+                } catch (JSONException e) {
+                    System.out.println("Invalid new column schema.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no new columns to add, move on
+        }
+
+        // DROP COLUMNS
+        try {
+            JSONArray dropCols = schemaSpecs.getJSONArray("drop");
+            for (int i = 0; i < dropCols.length(); i++) {
+                try {
+                    String colName = dropCols.getString(i);
+                    updateSchema.deleteColumn(colName);
+                    op |= OP_DROP;
+                } catch (JSONException e) {
+                    System.out.println("Invalid drop column schema.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no columns to drop, move on
+        }
+
+        // RENAME COLUMNS
+        try {
+            JSONArray renameCols = schemaSpecs.getJSONArray("rename");
+            for (int i = 0; i < renameCols.length(); i++) {
+                try {
+                    JSONObject jo = renameCols.getJSONObject(i);
+                    String name = jo.getString("name");
+                    String newName = jo.getString("newName");
+                    updateSchema.renameColumn(name, newName);
+                    op |= OP_RENAME;
+                } catch (JSONException e) {
+                    System.out.println("Invalid rename column schema.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no columns to rename, move on
+        }
+
+        // have we altered anything?
+        if (op == OP_NONE) {
+            System.out.println("Unrecognized ALTER operation.");
+            return false;
+        }
+
+        // confirm DROP wasn't bundled with any other ALTERs
+        if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
+            System.out.println("Cannot perform DROP along with other ALTER operations.");
+            return false;
+        }
+
+        // all good - commit changes
+        updateSchema.commit();
+        return true;
+    }
+
     public boolean dropTable() {
         if (iceberg_table == null)
             loadTable();
