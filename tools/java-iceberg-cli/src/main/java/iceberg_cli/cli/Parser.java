@@ -86,7 +86,13 @@ public class Parser {
         describe.addOption("--help", "Show this help message and exit");
         describe.addArgument("identifier", "Table or namespace identifier", true);
         m_commands.put("describe", describe);
-        
+
+        Command alter = new Command("alter", "Alter a table");
+        alter.addOption("--help", "Show this help message and exit");
+        alter.addArgument("identifier", "Table or namespace identifier", true);
+        create.addArgument("schema", "Alter a table using this schema");
+        m_commands.put("alter", alter);
+
         Command drop = new Command("drop", "Drop a table or a namespace");
         drop.addOption("--help", "Show this help message and exit");
         drop.addArgument("identifier", "Table or namespace identifier", true);
