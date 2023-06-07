@@ -1,4 +1,4 @@
-package iceberg;
+package iceberg_cli;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -22,10 +22,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import iceberg.catalog.ConfigLoader;
-import iceberg.catalog.CustomCatalog;
-import iceberg.utils.AwsCredentials;
-import iceberg.utils.Credentials;
+import iceberg_cli.catalog.ConfigLoader;
+import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.utils.AwsCredentials;
+import iceberg_cli.utils.Credentials;
 
 class TestAlterTable {
     static String uri, warehouse, aws;
@@ -44,14 +44,14 @@ class TestAlterTable {
             System.exit(1);
         }
         // Create a dummy credentials object instead which will be populated using env variables
-        creds = new AwsCredentials(new JSONObject(), "AWS");
+        creds = new AwsCredentials(new JSONObject());
     }
 
     CustomCatalog createCatalog(String namespace, String tablename) {
         CustomCatalog catalog = null;
         try {
             // Load catalog configuration
-            catalog = new ConfigLoader().init("default", uri, warehouse, creds);
+            catalog = new ConfigLoader().init("default", uri, warehouse);
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }

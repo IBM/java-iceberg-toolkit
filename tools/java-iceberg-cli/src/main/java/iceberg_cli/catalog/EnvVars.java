@@ -14,7 +14,8 @@ public enum EnvVars {
     METASTORE_KEYSTORE_PATH (MetastoreConf.ConfVars.SSL_KEYSTORE_PATH),
     METASTORE_KEYSTORE_PASSWORD (MetastoreConf.ConfVars.SSL_KEYSTORE_PASSWORD),
     METASTORE_TRUSTSTORE_PATH (MetastoreConf.ConfVars.SSL_TRUSTSTORE_PATH),
-    METASTORE_TRUSTSTORE_PASSWORD (MetastoreConf.ConfVars.SSL_TRUSTSTORE_PASSWORD);
+    METASTORE_TRUSTSTORE_PASSWORD (MetastoreConf.ConfVars.SSL_TRUSTSTORE_PASSWORD),
+    METASTORE_CLIENT_PLAIN_USERNAME (MetastoreConf.ConfVars.METASTORE_CLIENT_PLAIN_USERNAME);
     
     public final HiveConf.ConfVars hiveConf;
     public final MetastoreConf.ConfVars metaConf;
