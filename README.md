@@ -119,6 +119,7 @@ Commands:
   metadata             Get table metadata
   read                 Read from a table
   commit               Commit file(s) to a table
+  rewrite              Rewrite file(s) in a table
   list                 List tables or namespaces
   type                 Fetch table type
   uuid                 Fetch uuid of a table
@@ -248,6 +249,7 @@ Operation Name | Iceberg Table | Hive Table
 ---|---|---|
 Create a namespace or a table | Y |
 Commit to a table | Y |
+Rewrite files in a table | Y |
 Describe a namespace or a table | Y
 Drop a namespace or a table | Y 
 Get plan tasks of a table | Y | Y
