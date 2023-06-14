@@ -7,7 +7,7 @@ A list of examples of all supported CLI commands and their expected output.
 * [Help](/docs/sample_cli_commands.md#help)
 * [List](/docs/sample_cli_commands.md#list)
 * [Create](/docs/sample_cli_commands.md#create)
-* [Write/Commit](/docs/sample_cli_commands.md#writecommit)
+* [Write/Commit/Rewrite](/docs/sample_cli_commands.md#writecommitrewrite)
 * [Read](/docs/sample_cli_commands.md#read)
 * [Table Information](/docs/sample_cli_commands.md#table-information)
 * [Details](/docs/sample_cli_commands.md#details)
@@ -95,7 +95,7 @@ Creating the table test.test_table
 Table created successfully
 ```
 
-### Write/Commit 
+### Write/Commit/Rewrite 
 
 * Write to a table. Table *test_table* in namespace *test* in this example. Adding one record to the schema in create table example in this example.
 ```
@@ -111,6 +111,14 @@ Txn Complete!
 ```
 % java -jar <jar> -u <uri> commit test.test_table '{"files":[{"file_path":"<path1>"}, {"file_path":"<path2>"}]}'
 Commiting to the table test.test_table
+Starting Txn
+Txn Complete!
+```
+
+* Rewrite (replace) old data files in a table with new data files. Table *test_table* in namespace *test* in this example.
+```
+% java -jar <jar> -u <uri> rewrite test.test_table '{"files_to_del":[{"file_path":"path_a"}], "files_to_add":[{"file_path":"path_b"}]}'
+Rewriting files in the table test.test_table
 Starting Txn
 Txn Complete!
 ```
