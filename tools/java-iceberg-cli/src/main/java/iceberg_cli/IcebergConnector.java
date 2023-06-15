@@ -600,7 +600,7 @@ public class IcebergConnector extends MetastoreConnector
     	}
     }
     
-    Datafile getDataFile(S3FileIO io, String filePath, String fileFormatStr, Long fileSize, Long numRecords) throws Exception {
+    DataFile getDataFile(S3FileIO io, String filePath, String fileFormatStr, Long fileSize, Long numRecords) throws Exception {
         PartitionSpec ps = iceberg_table.spec();
         OutputFile outputFile = io.newOutputFile(filePath);
 
@@ -719,16 +719,15 @@ public class IcebergConnector extends MetastoreConnector
             Long numRecords = getJsonLongOrDefault(file, "record_count", null);
             
             try {
-                getDataFile(
+                append.appendFile(getDataFile(
                     io,
                     filePath,
                     fileFormatStr,
                     fileSize,
-                    numRecords);
+                    numRecords));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             } 
-            append.appendFile(data);
         }
         append.commit();
         transaction.commitTransaction();
@@ -750,8 +749,8 @@ public class IcebergConnector extends MetastoreConnector
         Set<DataFile> newDataFiles = new HashSet<DataFile>();
 
         try {
-            oldDataFiles = getDataFileSet(io, JSONObject(dataFiles).getJSONArray("files_to_del"));
-            newDataFiles = getDataFileSet(io, JSONObject(dataFiles).getJSONArray("files_to_add"));
+            oldDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_del"));
+            newDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_add"));
         } catch (Exception e) {
                 throw new RuntimeException(e);
         } 
