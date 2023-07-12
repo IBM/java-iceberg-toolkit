@@ -177,19 +177,24 @@ class FunctionalTest {
     @DisplayName("Test the functionality of rewrite files")
     void rewritefiles() throws ServletException {
         try {
-            metaConn = new IcebergConnector(catalog, namespace, tablename, creds);
-            MetastoreConnector metaConnDup = new IcebergConnector(catalog, namespace, (tablename + "Dup"), creds);
+            metaConn = new IcebergConnector(catalog, namespace, tableName, creds);
+            MetastoreConnector metaConnDup = new IcebergConnector(catalog, namespace, (tableName + "Dup"), creds);
             Schema schema = SchemaParser.fromJson("{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}");
         
             System.out.println("Running test 8...");
             String record = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
             String dataFiles = metaConn.writeTable(record, null);
-            boolean status = metaConnDup.createTable(schema, null, false);
+            boolean status = metaConn.commitTable(dataFiles);
+            Assertions.assertEquals(true, status); 
+            status = metaConnDup.createTable(schema, null, false);
             String dataFilesDup = metaConnDup.writeTable(record, null);
             JSONObject result = new JSONObject();
             result.put("files_to_del", new JSONObject(dataFiles).getJSONArray("files"));
             result.put("files_to_add", new JSONObject(dataFilesDup).getJSONArray("files"));
             status = metaConn.rewriteFiles(result.toString());
+            Assertions.assertEquals(true, status);
+            // Clean up rewritten table
+            status = metaConnDup.dropTable();
             Assertions.assertEquals(true, status);
             System.out.println("Test 8 completed");
             passed_tests += 1;
@@ -206,8 +211,6 @@ class FunctionalTest {
         try {
             System.out.println("Running test 6...");
             boolean status = metaConn.dropTable();
-            Assertions.assertEquals(true, status);
-            status = metaConnDup.dropTable();
             Assertions.assertEquals(true, status);
             System.out.println("Test 6 completed");
             passed_tests += 1;
