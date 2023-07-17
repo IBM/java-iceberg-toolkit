@@ -32,6 +32,7 @@ import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.HasTableOperations;
 import org.apache.iceberg.PartitionSpec;
+import org.apache.iceberg.RewriteFiles;
 import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.LocationProvider;
@@ -599,13 +600,106 @@ public class IcebergConnector extends MetastoreConnector
     	}
     }
     
+    DataFile getDataFile(S3FileIO io, String filePath, String fileFormatStr, Long fileSize, Long numRecords) throws Exception {
+        PartitionSpec ps = iceberg_table.spec();
+        OutputFile outputFile = io.newOutputFile(filePath);
+
+        if(fileFormatStr == null) {
+            // if file format is not provided, we'll try to infer from the file extension (if any)
+            String fileLocation = outputFile.location();
+            if(fileLocation.contains("."))
+                fileFormatStr = fileLocation.substring(fileLocation.lastIndexOf('.') + 1, fileLocation.length());
+            else
+                fileFormatStr = "";
+        }
+        
+        FileFormat fileFormat = null;
+        if(fileFormatStr.isEmpty())
+            throw new Exception("Unable to infer the file format of the file to be committed: " + outputFile.location());
+        else if(fileFormatStr.toLowerCase().equals("parquet"))
+            fileFormat = FileFormat.PARQUET;
+        else
+            throw new Exception("Unsupported file format " + fileFormatStr + " cannot be committed: " + outputFile.location());
+        
+        if(fileSize == null) {
+            try {
+                FileSystem fs = FileSystem.get(new URI(outputFile.location()), m_catalog.getConf());
+                FileStatus fstatus = fs.getFileStatus(new Path(outputFile.location()));
+                fileSize = fstatus.getLen();
+            } catch (Exception e) {
+                throw new Exception("Unable to infer the filesize of the file to be committed: " + outputFile.location());
+            }
+        }
+            
+        if (numRecords == null) {
+            try {
+                /* The apache parquet reader code wants a type of apache.parquet.io.InputFile, however the iceberg apis have no way
+                    * to provide that object and the apache.iceberg.io.InputFile may not be passed to the parquet read functions directly.
+                    * the iceberg apis want to prevent you from reading the parquet files directly and instead push you to go through
+                    * it's own built in reader classes...but we cannot use those builtin reader classes because they require a scan of
+                    * the iceberg table...which we haven't committed these files to yet. Internally iceberg provides a ParquetIO
+                    * class which accepts an apache.iceberg.io.InputFile and implements the apache.parquet.io.InputFile interface, and this
+                    * is what is then used to read the parquet files within their tablescan code. Since this class is private, it can only be
+                    * instantiated using reflection, but we can make use of it to directly open the parquet file to collect the row count.
+                    */
+                Class<?> pifClass = Class.forName("org.apache.iceberg.parquet.ParquetIO");
+                Constructor<?> pifCstr =pifClass.getDeclaredConstructor();
+                pifCstr.setAccessible(true);
+                Object pifInst = pifCstr.newInstance();
+                Method pifMthd = pifClass.getDeclaredMethod("file", org.apache.iceberg.io.InputFile.class);
+                pifMthd.setAccessible(true);
+                org.apache.iceberg.io.InputFile pif = io.newInputFile(outputFile.location());
+                Object parquetInputFile = pifMthd.invoke(pifInst, pif);
+            
+                ParquetFileReader reader = ParquetFileReader.open((InputFile) parquetInputFile);
+                numRecords = reader.getRecordCount();
+            } catch (Exception e) {
+                throw new Exception("Unable to infer the number of records of the file to be committed: " + outputFile.location());
+            }
+        }
+
+        DataFile data = DataFiles.builder(ps)
+                .withPath(outputFile.location())
+                .withFormat(fileFormat)
+                .withFileSizeInBytes(fileSize)
+                .withRecordCount(numRecords)
+                .build();
+
+        return data;
+    }
+
+    Set<DataFile> getDataFileSet(S3FileIO io, JSONArray files) throws Exception {
+        Set<DataFile> dataFiles = new HashSet<DataFile>();
+
+        for (int index = 0; index < files.length(); ++index) {
+            JSONObject file = files.getJSONObject(index);
+            // Required
+            String filePath = file.getString("file_path");
+
+            // Optional (but slower if not given)
+            String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
+            Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
+            Long numRecords = getJsonLongOrDefault(file, "record_count", null);
+            
+            try {
+                dataFiles.add(getDataFile(
+                    io,
+                    filePath,
+                    fileFormatStr,
+                    fileSize,
+                    numRecords));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } 
+        }
+        return dataFiles;
+    }
+
     public boolean commitTable(String dataFiles) throws Exception {
         if (iceberg_table == null)
             loadTable();
         
         System.out.println("Commiting to the Iceberg table");
-        
-        PartitionSpec ps = iceberg_table.spec();
         
         S3FileIO io = initS3FileIO();
         
@@ -618,75 +712,22 @@ public class IcebergConnector extends MetastoreConnector
             JSONObject file = files.getJSONObject(index);
             // Required
             String filePath = file.getString("file_path");
-            OutputFile outputFile = io.newOutputFile(filePath);
 
             // Optional (but slower if not given)
             String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
             Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
             Long numRecords = getJsonLongOrDefault(file, "record_count", null);
             
-            if(fileFormatStr == null) {
-            	// if file format is not provided, we'll try to infer from the file extension (if any)
-            	String fileLocation = outputFile.location();
-            	if(fileLocation.contains("."))
-            		fileFormatStr = fileLocation.substring(fileLocation.lastIndexOf('.') + 1, fileLocation.length());
-            	else
-            		fileFormatStr = "";
-            }
-            
-            FileFormat fileFormat = null;
-            if(fileFormatStr.isEmpty())
-            	throw new Exception("Unable to infer the file format of the file to be committed: " + outputFile.location());
-            else if(fileFormatStr.toLowerCase().equals("parquet"))
-            	fileFormat = FileFormat.PARQUET;
-            else
-            	throw new Exception("Unsupported file format " + fileFormatStr + " cannot be committed: " + outputFile.location());
-            
-            if(fileSize == null) {
-            	try {
-            		FileSystem fs = FileSystem.get(new URI(outputFile.location()), m_catalog.getConf());
-            		FileStatus fstatus = fs.getFileStatus(new Path(outputFile.location()));
-            		fileSize = fstatus.getLen();
-            	} catch (Exception e) {
-            		throw new Exception("Unable to infer the filesize of the file to be committed: " + outputFile.location());
-            	}
-            }
-            	
-            if (numRecords == null) {
-            	try {
-                	/* The apache parquet reader code wants a type of apache.parquet.io.InputFile, however the iceberg apis have no way
-                	 * to provide that object and the apache.iceberg.io.InputFile may not be passed to the parquet read functions directly.
-                	 * the iceberg apis want to prevent you from reading the parquet files directly and instead push you to go through
-                	 * it's own built in reader classes...but we cannot use those builtin reader classes because they require a scan of
-                	 * the iceberg table...which we haven't committed these files to yet. Internally iceberg provides a ParquetIO
-                	 * class which accepts an apache.iceberg.io.InputFile and implements the apache.parquet.io.InputFile interface, and this
-                	 * is what is then used to read the parquet files within their tablescan code. Since this class is private, it can only be
-                	 * instantiated using reflection, but we can make use of it to directly open the parquet file to collect the row count.
-                	 */
-            		Class<?> pifClass = Class.forName("org.apache.iceberg.parquet.ParquetIO");
-            		Constructor<?> pifCstr =pifClass.getDeclaredConstructor();
-            		pifCstr.setAccessible(true);
-            		Object pifInst = pifCstr.newInstance();
-            		Method pifMthd = pifClass.getDeclaredMethod("file", org.apache.iceberg.io.InputFile.class);
-            		pifMthd.setAccessible(true);
-            		org.apache.iceberg.io.InputFile pif = io.newInputFile(outputFile.location());
-            		Object parquetInputFile = pifMthd.invoke(pifInst, pif);
-            	
-            		ParquetFileReader reader = ParquetFileReader.open((InputFile) parquetInputFile);
-            		numRecords = reader.getRecordCount();
-            	} catch (Exception e) {
-            		throw new Exception("Unable to infer the number of records of the file to be committed: " + outputFile.location());
-            	}
-            }
-
-            DataFile data = DataFiles.builder(ps)
-            		.withPath(outputFile.location())
-            		.withFormat(fileFormat)
-            		.withFileSizeInBytes(fileSize)
-            		.withRecordCount(numRecords)
-            		.build();
-            
-            append.appendFile(data);
+            try {
+                append.appendFile(getDataFile(
+                    io,
+                    filePath,
+                    fileFormatStr,
+                    fileSize,
+                    numRecords));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            } 
         }
         append.commit();
         transaction.commitTransaction();
@@ -695,6 +736,39 @@ public class IcebergConnector extends MetastoreConnector
         
         return true;
     }
+
+    public boolean rewriteFiles(String dataFiles) throws Exception {
+        if (iceberg_table == null)
+            loadTable();
+        
+        System.out.println("Rewriting files in the Iceberg table");
+        
+        S3FileIO io = initS3FileIO();
+
+        Set<DataFile> oldDataFiles = new HashSet<DataFile>();
+        Set<DataFile> newDataFiles = new HashSet<DataFile>();
+
+        try {
+            oldDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_del"));
+            newDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_add"));
+        } catch (Exception e) {
+                throw new RuntimeException(e);
+        } 
+
+        Transaction transaction = iceberg_table.newTransaction();
+        RewriteFiles rewrite = transaction.newRewrite();
+
+        // Rewrite data files
+        System.out.println("Starting Txn");
+        rewrite.rewriteFiles(oldDataFiles, newDataFiles);
+        rewrite.commit();
+        transaction.commitTransaction();
+        io.close();
+        System.out.println("Txn Complete!");
+
+        return true;
+    }
+
 
     public Schema getTableSchema() {
         if (iceberg_table == null)

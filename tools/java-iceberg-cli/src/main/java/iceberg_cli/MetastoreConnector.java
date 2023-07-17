@@ -75,6 +75,8 @@ public abstract class MetastoreConnector
     
     public abstract boolean commitTable(String dataFileName) throws Exception;
 
+    public abstract boolean rewriteFiles(String dataFileName) throws Exception;
+
     public abstract Schema getTableSchema();
     
     public abstract List<Namespace> listNamespaces() throws Exception;
