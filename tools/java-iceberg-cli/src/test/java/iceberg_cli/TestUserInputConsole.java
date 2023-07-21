@@ -141,7 +141,7 @@ class TestUserInputConsole {
         args[3] = namespace + "." + tablename;
         
         try {
-            System.out.println("Running test 6...");
+            System.out.println("Running test 5...");
             String out = new IcebergApplication().processRequest(args);
             Assertions.assertEquals("TOTAL RECORDS\n" + 1, out);
             System.out.println("Test 5 completed");
