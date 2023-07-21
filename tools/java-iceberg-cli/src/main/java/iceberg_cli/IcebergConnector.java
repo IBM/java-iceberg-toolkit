@@ -130,6 +130,15 @@ public class IcebergConnector extends MetastoreConnector
         m_catalog.initialize("hive", properties);
     }
     
+    private void loadScan() {
+        // Use snapshot passed by the user.
+        // By default, use the latest snapshot.
+        m_scan = iceberg_table.newScan();
+        if (m_snapshotId != null) {
+            m_scan = m_scan.useSnapshot(m_snapshotId);
+        }
+    }
+    
     public void setTableIdentifier(String namespace, String tableName) {
         m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
@@ -150,13 +159,7 @@ public class IcebergConnector extends MetastoreConnector
     
     public void loadTable() {
         iceberg_table = loadTable(m_tableIdentifier);
-
-        // Use snapshot passed by the user.
-        // By default, use the latest snapshot.
-        m_scan = iceberg_table.newScan();
-        if (m_snapshotId != null) {
-            m_scan = m_scan.useSnapshot(m_snapshotId);
-        }
+        loadScan();
     }
     
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
@@ -279,6 +282,9 @@ public class IcebergConnector extends MetastoreConnector
 
         // all good - commit changes
         updateSchema.commit();
+        // Reload table scan
+        loadScan();
+        
         return true;
     }
 
@@ -287,7 +293,11 @@ public class IcebergConnector extends MetastoreConnector
             loadTable();
         
         System.out.println("Dropping the table " + m_tableIdentifier);
-        if (m_catalog.dropTable(m_tableIdentifier)) {
+        boolean status = m_catalog.dropTable(m_tableIdentifier);
+        // Reload table scan
+        loadScan();
+
+        if (status) {
             System.out.println("Table dropped successfully");
             return true;
         }
@@ -764,6 +774,9 @@ public class IcebergConnector extends MetastoreConnector
         io.close();
         System.out.println("Txn Complete!");
         
+        // Reload table scan after a commit
+        loadScan();
+        
         return true;
     }
 
@@ -795,6 +808,9 @@ public class IcebergConnector extends MetastoreConnector
         transaction.commitTransaction();
         io.close();
         System.out.println("Txn Complete!");
+        
+        // Reload table scan after a commit
+        loadScan();
 
         return true;
     }
