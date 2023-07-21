@@ -8,7 +8,7 @@
  	<properties>
 		<io.netty.version>4.1.91.Final</io.netty.version>
 		<org.apache.logging.log4j.version>2.20.0</org.apache.logging.log4j.version>
-		<com.fasterxml.jackson.version>2.14.0</com.fasterxml.jackson.version>
+		<com.fasterxml.jackson.version>2.15.0</com.fasterxml.jackson.version>
 		<org.eclipse.jetty.version>11.0.14</org.eclipse.jetty.version>
 		<org.apache.iceberg.version>1.1.0</org.apache.iceberg.version>
 		<org.apache.hadoop.version>3.3.5</org.apache.hadoop.version>
@@ -76,7 +76,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-core</artifactId>
-			<version>2.15.0</version>
+			<version>${com.fasterxml.jackson.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
