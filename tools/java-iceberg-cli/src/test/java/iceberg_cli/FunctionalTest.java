@@ -43,7 +43,7 @@ class FunctionalTest {
     static MetastoreConnector metaConn;
     static String namespace;
     static String tableName;
-    static Integer total_tests = 7;
+    static Integer total_tests = 9;
     static Integer passed_tests = 0;
     static ArrayList <String> failed_tests = new ArrayList<String>();
     
@@ -171,9 +171,27 @@ class FunctionalTest {
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
-
+    
     @Test
     @Order(6)
+    @DisplayName("Test the functionality of recordcount table")
+    void recordcount() throws ServletException {
+        try {
+            Long expected = 1L;
+            
+            System.out.println("Running test 6...");
+            Long actual = metaConn.getFileRecordCount();
+            Assertions.assertEquals(expected, actual);    
+            System.out.println("Test 6 completed");
+            passed_tests += 1;
+        } catch (Throwable t) {
+            failed_tests.add("recordcount");
+            throw new ServletException("Error: " + t.getMessage(), t);
+        }
+    }
+
+    @Test
+    @Order(7)
     @DisplayName("Test the functionality of rewrite files")
     void rewritefiles() throws ServletException {
         try {
@@ -181,7 +199,7 @@ class FunctionalTest {
             MetastoreConnector metaConnDup = new IcebergConnector(catalog, namespace, (tableName + "Dup"), creds);
             Schema schema = SchemaParser.fromJson("{\"type\":\"struct\",\"schema-id\":0,\"fields\":[{\"id\":1,\"name\":\"ID\",\"required\":true,\"type\":\"int\"},{\"id\":2,\"name\":\"Name\",\"required\":true,\"type\":\"string\"},{\"id\":3,\"name\":\"Price\",\"required\":true,\"type\":\"double\"},{\"id\":4,\"name\":\"Purchase_date\",\"required\":true,\"type\":\"timestamp\"}]}");
         
-            System.out.println("Running test 8...");
+            System.out.println("Running test 7...");
             String record = "{\"records\":[{\"ID\":1,\"Name\":\"Testing\",\"Price\": 1000,\"Purchase_date\":\"2022-11-09T12:13:54.480\"}]}";
             String dataFiles = metaConn.writeTable(record, null);
             boolean status = metaConn.commitTable(dataFiles);
@@ -196,7 +214,7 @@ class FunctionalTest {
             // Clean up rewritten table
             status = metaConnDup.dropTable();
             Assertions.assertEquals(true, status);
-            System.out.println("Test 8 completed");
+            System.out.println("Test 7 completed");
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("rewritefiles");
@@ -205,14 +223,14 @@ class FunctionalTest {
     }
     
     @Test
-    @Order(7)
+    @Order(8)
     @DisplayName("Test the functionality of drop table")
     void droptable() throws ServletException {
         try {
-            System.out.println("Running test 6...");
+            System.out.println("Running test 8...");
             boolean status = metaConn.dropTable();
             Assertions.assertEquals(true, status);
-            System.out.println("Test 6 completed");
+            System.out.println("Test 8 completed");
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("droptable");
@@ -221,16 +239,16 @@ class FunctionalTest {
     }    
     
     @Test
-    @Order(8)
+    @Order(9)
     @DisplayName("Test the functionality of drop namespace")
     void dropnamespace() throws ServletException {
         try {
             Namespace nmspc = Namespace.of(namespace);
             
-            System.out.println("Running test 7...");
+            System.out.println("Running test 9...");
             boolean status = metaConn.dropNamespace(nmspc);
             Assertions.assertEquals(true, status);
-            System.out.println("Test 7 completed");
+            System.out.println("Test 9 completed");
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("dropnamespace");

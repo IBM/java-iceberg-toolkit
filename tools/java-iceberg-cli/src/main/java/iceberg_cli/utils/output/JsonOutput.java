@@ -33,13 +33,21 @@ public class JsonOutput extends Output{
                 
         return tableMetadata.toString();
     }
+    
+    @Override
+    public String tableRecordCount(Long totalEstimatedRecords) throws Exception {
+        JSONObject recordCount = new JSONObject();
+        recordCount.put("record_count", totalEstimatedRecords);
+        
+        return recordCount.toString();
+    }
 
     @Override
     public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
-            Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
+            Schema schema, String tableLocation, String dataLocation, String type, Long totalEstimatedRecords) throws Exception {
         JSONObject tableDetails = new JSONObject();
         
-        JSONObject dataFiles = new JSONObject(tableFiles(planFileTasks));
+        JSONObject dataFiles = new JSONObject(tableFiles(planFileTasks, totalEstimatedRecords));
         JSONObject schemaObject = new JSONObject(tableSchema(schema));
         JSONObject currentSnapshot = new JSONObject(currentSnapshot(snapshot));
         tableDetails.put("files", dataFiles);
@@ -95,12 +103,13 @@ public class JsonOutput extends Output{
     }
 
     @Override
-    public String tableFiles(Map<Integer, List<Map<String, String>>> planFileTasks) throws Exception {
+    public String tableFiles(Map<Integer, List<Map<String, String>>> planFileTasks, Long totalEstimatedRecords) throws Exception {
         if (planFileTasks == null) {
             return null;
         }
         
         JSONObject planFilesJsonObject = new JSONObject();
+        planFilesJsonObject.put("total_estimated_records", totalEstimatedRecords);
         for (Map.Entry<Integer, List<Map<String, String>>> entry : planFileTasks.entrySet()) {
             JSONArray tasksArray = new JSONArray();
             for (Map<String, String> task : entry.getValue()) {
@@ -108,6 +117,7 @@ public class JsonOutput extends Output{
                 taskobj.put("content", task.get("content"));
                 taskobj.put("file_path", task.get("file_path"));
                 taskobj.put("file_format", task.get("file_format"));
+                taskobj.put("record_count", task.get("record_count"));
                 taskobj.put("start", task.get("start"));
                 taskobj.put("length", task.get("length"));
                 taskobj.put("spec", task.get("spec"));

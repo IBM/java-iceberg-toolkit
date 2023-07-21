@@ -14,6 +14,10 @@ import org.apache.iceberg.Snapshot;
 import iceberg_cli.utils.DataConversion;
 
 public class CsvOutput extends Output {
+    
+    public CsvOutput() {
+        this.delimiter = ',';
+    }
 
     @Override
     public String listTables(List<String> tables) throws Exception {
@@ -44,34 +48,6 @@ public class CsvOutput extends Output {
                 builder.append("\n");
             }
         }
-        return builder.toString();
-    }
-
-    @Override
-    public String tableFiles(Map<Integer, List<Map<String, String>>> planFileTasks) throws Exception {
-        StringBuilder builder = new StringBuilder();
-        
-        // Add data files
-        char delim = ',';
-        if (planFileTasks != null) {
-            builder.append(String.format("TOTAL TASKS : %d\n", planFileTasks.size()));
-            for (Map.Entry<Integer, List<Map<String, String>>> entry : planFileTasks.entrySet()) {
-                builder.append(String.format("TOTAL FILES IN TASK %d : %d\n", entry.getKey(),entry.getValue().size()));
-                for (Map<String, String> task : entry.getValue()) {
-                    String taskInfo = String.format("%s%c%s%c%s%c%s%c%s%c%s%c%s",
-                                                    task.get("content"), delim,
-                                                    task.get("file_path"), delim,
-                                                    task.get("file_format"), delim,
-                                                    task.get("start"), delim,
-                                                    task.get("length"), delim,
-                                                    task.get("spec"), delim,
-                                                    task.get("residual")
-                                                    );
-                    builder.append(String.format("%s\n", taskInfo));
-                }
-            }
-        }
-        
         return builder.toString();
     }
 

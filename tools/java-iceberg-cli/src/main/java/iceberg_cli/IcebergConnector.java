@@ -334,9 +334,12 @@ public class IcebergConnector extends MetastoreConnector
             List<Map<String, String>> taskMapList = new ArrayList<Map<String, String>>();
             Map<String, String> taskMap = new HashMap<String, String>();
             DataFile file = scanTask.file();
+            Long recordCount = file.recordCount();
+            this.fileRecordCount += recordCount;
             taskMap.put("content", file.content().toString());
             taskMap.put("file_path", file.path().toString());
             taskMap.put("file_format", file.format().toString());
+            taskMap.put("record_count", Long.toString(recordCount));
             taskMap.put("start", Long.toString(scanTask.start()));
             taskMap.put("length", Long.toString(scanTask.length()));
             taskMap.put("spec", scanTask.spec().toString());
@@ -365,9 +368,12 @@ public class IcebergConnector extends MetastoreConnector
             for (FileScanTask fileTask : scanTask.files()) {
                 Map<String, String> taskMap = new HashMap<String, String>();
                 DataFile file = fileTask.file();
+                Long recordCount = fileTask.estimatedRowsCount();
+                this.taskRecordCount += recordCount;
                 taskMap.put("content", file.content().toString());
                 taskMap.put("file_path", file.path().toString());
                 taskMap.put("file_format", file.format().toString());
+                taskMap.put("record_count", Long.toString(recordCount));
                 taskMap.put("start", Long.toString(fileTask.start()));
                 taskMap.put("length", Long.toString(fileTask.length()));
                 taskMap.put("spec", fileTask.spec().toString());
@@ -454,6 +460,30 @@ public class IcebergConnector extends MetastoreConnector
             loadTable();
         TableMetadata metadata = ((HasTableOperations) iceberg_table).operations().current();
         return metadata.uuid();
+    }
+    
+    public Long getFileRecordCount() {
+        if (iceberg_table == null)
+            loadTable();
+        
+        Iterable<FileScanTask> scanTasks = m_scan.planFiles();
+        for (FileScanTask scanTask : scanTasks) {
+            fileRecordCount += scanTask.file().recordCount();
+        }
+                
+        return fileRecordCount;
+    }
+
+    public Long getTaskRecordCount() {
+        if (iceberg_table == null)
+            loadTable();
+        
+        Iterable<CombinedScanTask> scanTasks = m_scan.planTasks();
+        for (CombinedScanTask scanTask : scanTasks) {
+            taskRecordCount += scanTask.files().stream().mapToLong(f -> f.estimatedRowsCount()).sum();
+        }
+        
+        return taskRecordCount;
     }
          
     public Snapshot getCurrentSnapshot() {
