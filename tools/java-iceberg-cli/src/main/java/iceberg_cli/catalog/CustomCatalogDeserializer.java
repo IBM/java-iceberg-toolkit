@@ -31,6 +31,7 @@ public class CustomCatalogDeserializer extends StdDeserializer<CustomCatalog> {
         JsonNode node = p.getCodec().readTree(p);
         String name = node.get("name").asText();
         CustomCatalog.CatalogType type = CustomCatalog.CatalogType.valueOf(node.get("type").asText());
+        String metastoreUri = node.get("metastoreUri").asText();
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String> properties = mapper.convertValue(node.get("properties"), new TypeReference<Map<String, String>>(){});
         Map<String, String> conf = mapper.convertValue(node.get("conf"), new TypeReference<Map<String, String>>(){});
@@ -39,7 +40,7 @@ public class CustomCatalogDeserializer extends StdDeserializer<CustomCatalog> {
             hiveConf.set(entry.getKey(), entry.getValue());
         }
         
-        return new CustomCatalog(name, type, properties, hiveConf);
+        return new CustomCatalog(name, type, metastoreUri, properties, hiveConf);
     }
 
 }

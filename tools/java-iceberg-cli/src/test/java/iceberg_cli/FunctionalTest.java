@@ -63,7 +63,7 @@ class FunctionalTest {
             // Create a dummy credentials object instead which will be populated using env variables
             creds = new AwsCredentials(new JSONObject());
             // Load catalog configuration
-            catalog = new ConfigLoader().init("default", uri, warehouse);
+            catalog = new ConfigLoader().init("default", uri, warehouse, creds);
             // Initialize connector using a dummy credentials object
             metaConn = new IcebergConnector(catalog, namespace, tableName, creds);
             if (warehouse == null) {

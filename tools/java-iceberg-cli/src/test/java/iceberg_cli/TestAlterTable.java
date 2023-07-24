@@ -51,7 +51,7 @@ class TestAlterTable {
         CustomCatalog catalog = null;
         try {
             // Load catalog configuration
-            catalog = new ConfigLoader().init("default", uri, warehouse);
+            catalog = new ConfigLoader().init("default", uri, warehouse, creds);
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }

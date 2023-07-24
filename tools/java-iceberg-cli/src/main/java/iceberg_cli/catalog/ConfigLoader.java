@@ -28,20 +28,23 @@ import iceberg_cli.utils.Credentials;
 
 public class ConfigLoader {
     private static final String DEFAULT_CATALOG = "default";
-    public static final String CONFIG_YML =
-            String.format("%s/.java_iceberg_cli.yaml", System.getProperty("user.home"));
+    private static final String CONFIG_YML = ".java_iceberg_cli.yaml";
     
     /**
-     * Read catalogs information from ~/.java_iceberg_cli.yaml
+     * Read catalogs information from configuration file
+     * @param configFile
      * @return Catalogs which stores list of catalogs found in the file
      * @throws IOException
      */
-    private static Catalogs readFromYaml() {
+    private static Catalogs readFromYaml(String configFile) {
         try {
-            ObjectMapper mapper =  new ObjectMapper(new YAMLFactory());
-            mapper.findAndRegisterModules();
-            mapper.registerModule(new JavaTimeModule());
-            return mapper.readValue(new File(CONFIG_YML), Catalogs.class);
+            File file = new File(configFile);
+            if (file.isFile()) {
+                ObjectMapper mapper =  new ObjectMapper(new YAMLFactory());
+                mapper.findAndRegisterModules();
+                mapper.registerModule(new JavaTimeModule());
+                return mapper.readValue(file, Catalogs.class);
+            }
         } catch (Exception e) {
            System.err.println("WARNING: " + e.getMessage()); 
         }
@@ -60,21 +63,19 @@ public class ConfigLoader {
      * @return Catalog
      * @throws Exception
      */
-    public CustomCatalog init(String catalogName, String uri, String warehouse) throws Exception {
+    public CustomCatalog init(String catalogName, String uri, String warehouse, Credentials creds) throws Exception {
         CustomCatalog catalog = null;
         if (catalogName == null)
             catalogName = DEFAULT_CATALOG;
         
-        // Use config file if exists
-        if (new File(CONFIG_YML).isFile()) {
-            catalog = loadCatalogFromConfig(catalogName);
-        }
+        // Read from config file, if it exists
+        catalog = loadCatalogFromConfig(catalogName, uri);
                 
         if (catalog == null) {
-            catalog = new CustomCatalog(catalogName);
+            catalog = new CustomCatalog();
         }
                 
-        // Load Hadoop configuration values from environment variables
+        // Load from environment variables
         catalog.loadFromEnvironmentVariables();
 
         // Overwrite catalog configuration and properties, if specified by the user
@@ -96,27 +97,40 @@ public class ConfigLoader {
     /**
      * Get user specified catalog information from the config file
      * @param catalogName
+     * @param uri
      * @return Catalog
      * @throws IOException
      */
-    public static CustomCatalog loadCatalogFromConfig(String catalogName) throws IOException {
-        Catalogs catalogs = readFromYaml();
-        return catalogs.getCatalog(catalogName);
+    public static CustomCatalog loadCatalogFromConfig(String catalogName, String uri) throws IOException {
+        // Try loading config file from:
+        // 1-ICEBERG_CONFIG
+        // 2- User home directory
+        String directory = System.getenv("ICEBERG_CONFIG");
+        String configFile = String.format("%s/%s", directory, CONFIG_YML);
+        File file = new File(configFile);
+        if (directory == null || !file.isFile()) {
+            directory = System.getProperty("user.home");
+            configFile = String.format("%s/%s", directory, CONFIG_YML);
+        }
+        Catalogs catalogs = readFromYaml(configFile);
+        // Load config values only when the metastore URI matches
+        return catalogs.getCatalog(catalogName, uri); 
     }
 
     /**
      * Write catalogs information to the config file
+     * @param configFile
      * @param catalogs
      * @throws StreamWriteException
      * @throws DatabindException
      * @throws IOException
      */
-    public static void writeToYaml(Catalogs catalogs) throws StreamWriteException, DatabindException, IOException {
+    public static void writeToYaml(String configFile, Catalogs catalogs) throws StreamWriteException, DatabindException, IOException {
         ObjectMapper mapper =  new YAMLMapper();
         mapper = new ObjectMapper(new YAMLFactory().disable(Feature.WRITE_DOC_START_MARKER));
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.registerModule(new JavaTimeModule());
-        mapper.writeValue(new File(CONFIG_YML), catalogs);
+        mapper.writeValue(new File(configFile), catalogs);
     }
 
     /**
