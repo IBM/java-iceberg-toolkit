@@ -6,8 +6,10 @@
   <name>java-iceberg-cli</name>
   <description>Java Iceberg CLI</description>
  	<properties>
-		<io.netty.version>4.1.91.Final</io.netty.version>
+		<io.netty.version>4.1.94.Final</io.netty.version>
 		<org.apache.logging.log4j.version>2.20.0</org.apache.logging.log4j.version>
+		<org.xerial.snappy.version>1.1.10.1</org.xerial.snappy.version>
+		<de.ruedigermoeller.version>2.57</de.ruedigermoeller.version>
 		<com.fasterxml.jackson.version>2.15.0</com.fasterxml.jackson.version>
 		<org.eclipse.jetty.version>11.0.14</org.eclipse.jetty.version>
 		<org.apache.iceberg.version>1.1.0</org.apache.iceberg.version>
@@ -28,7 +30,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>31.1-jre</version>
+			<version>32.0.1-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>io.netty</groupId>
@@ -67,6 +69,16 @@
 			<groupId>org.yaml</groupId>
 			<artifactId>snakeyaml</artifactId>
 			<version>2.0</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.xerial.snappy</groupId>
+		    <artifactId>snappy-java</artifactId>
+		    <version>${org.xerial.snappy.version}</version>
+		</dependency>
+		<dependency>
+		    <groupId>de.ruedigermoeller</groupId>
+		    <artifactId>fst</artifactId>
+		    <version>${de.ruedigermoeller.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
