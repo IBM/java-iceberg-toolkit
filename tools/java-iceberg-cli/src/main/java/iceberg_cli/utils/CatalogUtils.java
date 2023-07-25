@@ -33,7 +33,7 @@ public class CatalogUtils {
             String namespace, String table, Credentials creds) throws Exception {
         MetastoreConnector conn = null;
         // Load catalog information
-        CustomCatalog catalog = new ConfigLoader().init(catalogName, uri, warehouse, creds);
+        CustomCatalog catalog = new ConfigLoader().init(catalogName, uri, warehouse);
         
         // Auto detect format
         if (format == null) {

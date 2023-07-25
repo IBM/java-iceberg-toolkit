@@ -63,7 +63,7 @@ public class ConfigLoader {
      * @return Catalog
      * @throws Exception
      */
-    public CustomCatalog init(String catalogName, String uri, String warehouse, Credentials creds) throws Exception {
+    public CustomCatalog init(String catalogName, String uri, String warehouse) throws Exception {
         CustomCatalog catalog = null;
         if (catalogName == null)
             catalogName = DEFAULT_CATALOG;
