@@ -130,6 +130,15 @@ public class IcebergConnector extends MetastoreConnector
         m_catalog.initialize("hive", properties);
     }
     
+    private void loadScan() {
+        // Use snapshot passed by the user.
+        // By default, use the latest snapshot.
+        m_scan = iceberg_table.newScan();
+        if (m_snapshotId != null) {
+            m_scan = m_scan.useSnapshot(m_snapshotId);
+        }
+    }
+    
     public void setTableIdentifier(String namespace, String tableName) {
         m_tableIdentifier = TableIdentifier.of(namespace, tableName);
     }
@@ -150,13 +159,7 @@ public class IcebergConnector extends MetastoreConnector
     
     public void loadTable() {
         iceberg_table = loadTable(m_tableIdentifier);
-
-        // Use snapshot passed by the user.
-        // By default, use the latest snapshot.
-        m_scan = iceberg_table.newScan();
-        if (m_snapshotId != null) {
-            m_scan = m_scan.useSnapshot(m_snapshotId);
-        }
+        loadScan();
     }
     
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
@@ -279,6 +282,9 @@ public class IcebergConnector extends MetastoreConnector
 
         // all good - commit changes
         updateSchema.commit();
+        // Reload table scan
+        loadScan();
+        
         return true;
     }
 
@@ -287,7 +293,11 @@ public class IcebergConnector extends MetastoreConnector
             loadTable();
         
         System.out.println("Dropping the table " + m_tableIdentifier);
-        if (m_catalog.dropTable(m_tableIdentifier)) {
+        boolean status = m_catalog.dropTable(m_tableIdentifier);
+        // Reload table scan
+        loadScan();
+
+        if (status) {
             System.out.println("Table dropped successfully");
             return true;
         }
@@ -334,9 +344,12 @@ public class IcebergConnector extends MetastoreConnector
             List<Map<String, String>> taskMapList = new ArrayList<Map<String, String>>();
             Map<String, String> taskMap = new HashMap<String, String>();
             DataFile file = scanTask.file();
+            Long recordCount = file.recordCount();
+            this.fileRecordCount += recordCount;
             taskMap.put("content", file.content().toString());
             taskMap.put("file_path", file.path().toString());
             taskMap.put("file_format", file.format().toString());
+            taskMap.put("record_count", Long.toString(recordCount));
             taskMap.put("start", Long.toString(scanTask.start()));
             taskMap.put("length", Long.toString(scanTask.length()));
             taskMap.put("spec", scanTask.spec().toString());
@@ -365,9 +378,12 @@ public class IcebergConnector extends MetastoreConnector
             for (FileScanTask fileTask : scanTask.files()) {
                 Map<String, String> taskMap = new HashMap<String, String>();
                 DataFile file = fileTask.file();
+                Long recordCount = fileTask.estimatedRowsCount();
+                this.taskRecordCount += recordCount;
                 taskMap.put("content", file.content().toString());
                 taskMap.put("file_path", file.path().toString());
                 taskMap.put("file_format", file.format().toString());
+                taskMap.put("record_count", Long.toString(recordCount));
                 taskMap.put("start", Long.toString(fileTask.start()));
                 taskMap.put("length", Long.toString(fileTask.length()));
                 taskMap.put("spec", fileTask.spec().toString());
@@ -454,6 +470,30 @@ public class IcebergConnector extends MetastoreConnector
             loadTable();
         TableMetadata metadata = ((HasTableOperations) iceberg_table).operations().current();
         return metadata.uuid();
+    }
+    
+    public Long getFileRecordCount() {
+        if (iceberg_table == null)
+            loadTable();
+        
+        Iterable<FileScanTask> scanTasks = m_scan.planFiles();
+        for (FileScanTask scanTask : scanTasks) {
+            fileRecordCount += scanTask.file().recordCount();
+        }
+                
+        return fileRecordCount;
+    }
+
+    public Long getTaskRecordCount() {
+        if (iceberg_table == null)
+            loadTable();
+        
+        Iterable<CombinedScanTask> scanTasks = m_scan.planTasks();
+        for (CombinedScanTask scanTask : scanTasks) {
+            taskRecordCount += scanTask.files().stream().mapToLong(f -> f.estimatedRowsCount()).sum();
+        }
+        
+        return taskRecordCount;
     }
          
     public Snapshot getCurrentSnapshot() {
@@ -734,6 +774,9 @@ public class IcebergConnector extends MetastoreConnector
         io.close();
         System.out.println("Txn Complete!");
         
+        // Reload table scan after a commit
+        loadScan();
+        
         return true;
     }
 
@@ -765,6 +808,9 @@ public class IcebergConnector extends MetastoreConnector
         transaction.commitTransaction();
         io.close();
         System.out.println("Txn Complete!");
+        
+        // Reload table scan after a commit
+        loadScan();
 
         return true;
     }

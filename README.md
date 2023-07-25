@@ -65,13 +65,13 @@ java -jar /home/java-iceberg-cli/target/<jar_name> --help
 ### CLI
 Pass in the URI to the Hive Metastore using -u or --uri options and optionally specify a storage path when creating a new namespace using -w or --warehouse options. By default, the default FS value specified in Hive's configuration file will be used as the warehouse path.
 
-Set credentials for the object store using environment variables. Please note that you would need to specify AWS_ENDPOINT if using a non-AWS object store.
+Set credentials for the object store using environment variables. Please note that you would need to specify ENDPOINT if using a non-AWS object store.
 ```
 export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 export AWS_REGION=
 # specify endpoint to a non-AWS object store, if applicable
-export AWS_ENDPOINT=
+export ENDPOINT=
 ```
 
 Credentials can also be passed to the CLI as:
@@ -86,7 +86,7 @@ export AWS_ACCESS_KEY_ID=
 export AWS_SECRET_ACCESS_KEY=
 export AWS_REGION=
 # specify endpoint to a non-AWS object store, if applicable
-export AWS_ENDPOINT=
+export ENDPOINT=
 export URI=
 export WAREHOUSE=
 ```
@@ -105,7 +105,7 @@ usage: java -jar <jar_name> [options] command [args]
  -c,--credential <credentials>    Supported credentials : AWS
     --catalog <value>             Read properties for this catalog from
                                   the config file
-    --format <iceberg|hive>       The format of the table we want to
+ -m,--format <iceberg|hive>       The format of the table we want to
                                   display
  -h,--help                        Show this help message
  -o,--output <console|csv|json>   Show output in this format
@@ -117,12 +117,13 @@ Commands:
   drop                 Drop a table or a namespace
   schema               Fetch schema of a table
   metadata             Get table metadata
+  recordcount          Get total number of records in a table
   read                 Read from a table
   commit               Commit file(s) to a table
-  rewrite              Rewrite file(s) in a table
   list                 List tables or namespaces
   type                 Fetch table type
   uuid                 Fetch uuid of a table
+  rewrite              Rewrite (replace) file(s) in a table
   spec                 Fetch partition spec of a table
   rename               Rename a table a table
   create               Create a table or a namespace
@@ -132,6 +133,7 @@ Commands:
   write                Write to a table
   snapshot             Fetch latest or all snapshot(s) of a table
   tasks                List scan tasks of a table
+  alter                Alter a table
 ```
 Each subcommand provides a help message of its own.
 ```

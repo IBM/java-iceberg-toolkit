@@ -119,6 +119,11 @@ public class Parser {
         metadata.addArgument("identifier", "Table identifier", true);
         m_commands.put("metadata", metadata);
         
+        Command recordcount = new Command("recordcount", "Get total number of records in a table");
+        recordcount.addOption("--help", "Show this help message and exit");
+        recordcount.addArgument("identifier", "Table identifier", true);
+        m_commands.put("recordcount", recordcount);
+        
         Command read = new Command("read", "Read from a table");
         read.addOption("--help", "Show this help message and exit");
         read.addArgument("identifier", "Table identifier", true);

@@ -13,6 +13,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
 
 public class Output {
+    protected char delimiter = ' ';
     
     public String tableMetadata(Snapshot snapshot, Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
         StringBuilder builder = new StringBuilder();
@@ -30,10 +31,18 @@ public class Output {
         return builder.toString();
     }
     
-    public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
-            Schema schema, String tableLocation, String dataLocation, String type) throws Exception {
+    public String tableRecordCount(Long totalEstimatedRecords) throws Exception {
         StringBuilder builder = new StringBuilder();
-        builder.append(tableFiles(planFileTasks));
+        builder.append("TOTAL RECORDS\n");
+        builder.append(totalEstimatedRecords);
+        
+        return builder.toString();
+    }
+    
+    public String tableDetails(Map<Integer, List<Map<String, String>>> planFileTasks, Snapshot snapshot,
+            Schema schema, String tableLocation, String dataLocation, String type, Long totalEstimatedRecords) throws Exception {
+        StringBuilder builder = new StringBuilder();
+        builder.append(tableFiles(planFileTasks, totalEstimatedRecords));
         builder.append("SNAPSHOT\n");
         builder.append(currentSnapshot(snapshot));
         builder.append("\nSCHEMA\n");
@@ -94,23 +103,24 @@ public class Output {
         return builder.toString();
     }
     
-    public String tableFiles(Map<Integer, List<Map<String, String>>> planFileTasks) throws Exception {
+    public String tableFiles(Map<Integer, List<Map<String, String>>> planFileTasks, Long totalEstimatedRecords) throws Exception {
         StringBuilder builder = new StringBuilder();
         
         // Add data files
-        char delim = ' ';
         if (planFileTasks != null) {
+            builder.append(String.format("TOTAL ESTIMATED RECORDS : %d\n", totalEstimatedRecords));
             builder.append(String.format("TOTAL TASKS : %d\n", planFileTasks.size()));
             for (Map.Entry<Integer, List<Map<String, String>>> entry : planFileTasks.entrySet()) {
                 builder.append(String.format("TOTAL FILES IN TASK %d : %d\n", entry.getKey(),entry.getValue().size()));
                 for (Map<String, String> task : entry.getValue()) {
-                    String taskInfo = String.format("%s%c%s%c%s%c%s%c%s%c%s%c%s",
-                                                    task.get("content"), delim,
-                                                    task.get("file_path"), delim,
-                                                    task.get("file_format"), delim,
-                                                    task.get("start"), delim,
-                                                    task.get("length"), delim,
-                                                    task.get("spec"), delim,
+                    String taskInfo = String.format("%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
+                                                    task.get("content"), this.delimiter,
+                                                    task.get("file_path"), this.delimiter,
+                                                    task.get("file_format"), this.delimiter,
+                                                    task.get("record_count"), this.delimiter,
+                                                    task.get("start"), this.delimiter,
+                                                    task.get("length"), this.delimiter,
+                                                    task.get("spec"), this.delimiter,
                                                     task.get("residual")
                                                     );
                     builder.append(String.format("%s\n", taskInfo));

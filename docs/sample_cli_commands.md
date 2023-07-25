@@ -182,11 +182,18 @@ table {
 <uuid>
 ```
 
+* Get record count of a table. Table *test_table* in namespace *test* in this example.
+```
+% java -jar <jar> -u <uri> recordcount test.test_table
+<uuid>
+```
+
 ### Details
 
 * Get details of a table. Table *test_table* in namespace *test* in this example.
 ```
 % java -jar <jar> -u <uri> describe test.test_table
+TOTAL ESTIMATED RECORDS : 1
 TOTAL TASKS: 1
 TOTAL FILES IN TASK 0 : 1
 DATA <location> PARQUET 0 2000 [] true

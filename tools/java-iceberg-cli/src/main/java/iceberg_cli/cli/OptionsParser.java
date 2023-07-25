@@ -60,7 +60,7 @@ public class OptionsParser {
         options.addOption(Option.builder("w").longOpt("warehouse").argName("value").hasArg().desc("Table location").build());
         options.addOption(Option.builder("o").longOpt("output").argName("console|csv|json").hasArg().desc("Show output in this format").build());
         options.addOption(Option.builder().longOpt("catalog").argName("value").hasArg().desc("Read properties for this catalog from the config file").build());
-        options.addOption(Option.builder().longOpt("format").argName("iceberg|hive").hasArg().desc("The format of the table we want to display").build());
+        options.addOption(Option.builder("m").longOpt("format").argName("iceberg|hive").hasArg().desc("The format of the table we want to display").build());
         options.addOption(Option.builder().longOpt("snapshot").argName("snapshot ID").hasArg().desc("Snapshot ID to use").build());
         
         CommandLineParser parser = new DefaultParser();

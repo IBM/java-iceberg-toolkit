@@ -58,18 +58,29 @@ public class PrintUtils {
     }
     
     /**
+     * Get total record count from MetastoreConnector and return to the user is the given format
+     * @throws Exception 
+     */
+    public String printRecordCount() throws Exception {
+        Long totalEstimatedRecords = metaConn.getFileRecordCount();
+        
+        return output.tableRecordCount(totalEstimatedRecords);
+    }
+    
+    /**
      * Get table details from MetastoreConnector and output to the user is the given format
      * @throws Exception 
      */
     public String printTableDetails() throws Exception {
         Map<Integer, List<Map<String, String>>> planFileTasks = metaConn.getPlanFiles();
+        Long totalEstimatedRecords = metaConn.getFileRecordCount();
         Snapshot snapshot = metaConn.getCurrentSnapshot();
         Schema targetSchema = metaConn.getTableSchema();
         String tableLocation = metaConn.getTableLocation();
         String dataLocation = metaConn.getTableDataLocation();
         String type = metaConn.getTableType();
         
-        return output.tableDetails(planFileTasks, snapshot, targetSchema, tableLocation, dataLocation, type);
+        return output.tableDetails(planFileTasks, snapshot, targetSchema, tableLocation, dataLocation, type, totalEstimatedRecords);
     }
     
     /**
@@ -142,7 +153,9 @@ public class PrintUtils {
     public String printFiles() throws Exception {
         String outputString = null;
         
-        String planFiles = output.tableFiles(metaConn.getPlanFiles());
+        Map<Integer, List<Map<String, String>>> taskMapList = metaConn.getPlanFiles();
+        Long totalEstimatedRecords = metaConn.getFileRecordCount();
+        String planFiles = output.tableFiles(taskMapList, totalEstimatedRecords);
         Long snapshotId = metaConn.getCurrentSnapshotId();
         switch (format) {
             case "json":
@@ -165,7 +178,9 @@ public class PrintUtils {
     public String printTasks() throws Exception {
         String outputString = null;
         
-        String planFiles = output.tableFiles(metaConn.getPlanTasks());
+        Map<Integer, List<Map<String, String>>> taskMapList = metaConn.getPlanTasks();
+        Long totalEstimatedRecords = metaConn.getTaskRecordCount();
+        String planFiles = output.tableFiles(taskMapList, totalEstimatedRecords);
         Long snapshotId = metaConn.getCurrentSnapshotId();
         switch (format) {
             case "json":

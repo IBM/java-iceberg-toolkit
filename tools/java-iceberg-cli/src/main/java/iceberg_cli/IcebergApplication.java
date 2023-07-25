@@ -121,6 +121,9 @@ public class IcebergApplication {
         case "metadata":
             output = printUtils.printTableMetadata();
             break;
+        case "recordcount":
+            output = printUtils.printRecordCount();
+            break;
         case "tasks":
             output = printUtils.printTasks();
             break;

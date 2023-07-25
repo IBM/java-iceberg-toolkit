@@ -20,7 +20,7 @@ class TestUserInputConsole {
     static String warehouse;
     static String namespace;
     static String tablename;
-    static Integer total_tests = 6;
+    static Integer total_tests = 7;
     static Integer passed_tests = 0;
     static ArrayList <String> failed_tests = new ArrayList<String>();
     
@@ -132,6 +132,29 @@ class TestUserInputConsole {
     
     @Test
     @Order(5)
+    @DisplayName("Test the functionality of recordcount action")
+    void recordcount() throws ServletException {
+        String[] args = new String[4];
+        args[0] = "-u";
+        args[1] = uri;
+        args[2] = "recordcount";
+        args[3] = namespace + "." + tablename;
+        
+        try {
+            System.out.println("Running test 5...");
+            String out = new IcebergApplication().processRequest(args);
+            Assertions.assertEquals("TOTAL RECORDS\n" + 1, out);
+            System.out.println("Test 5 completed");
+            passed_tests += 1;
+        } catch (Throwable t) {
+            failed_tests.add("listtables");
+            throw new ServletException("Error: " + t.getMessage(), t);
+        }
+        
+    }
+    
+    @Test
+    @Order(6)
     @DisplayName("Test the functionality of drop action")
     void droptable() throws ServletException {
         String[] args = new String[4];
@@ -141,10 +164,10 @@ class TestUserInputConsole {
         args[3] = namespace + "." + tablename;
         
         try {
-            System.out.println("Running test 5...");
+            System.out.println("Running test 6...");
             String out = new IcebergApplication().processRequest(args);
             Assertions.assertEquals("Operation successful? true", out);
-            System.out.println("Test 5 completed");
+            System.out.println("Test 6 completed");
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("droptable");
@@ -154,7 +177,7 @@ class TestUserInputConsole {
     }
     
     @Test
-    @Order(6)
+    @Order(7)
     @DisplayName("Test the functionality of dropnamespace action")
     void dropnamespace() throws ServletException {
         String[] args = new String[4];
@@ -164,10 +187,10 @@ class TestUserInputConsole {
         args[3] = namespace;
                   
         try {
-            System.out.println("Running test 6...");
+            System.out.println("Running test 7...");
             String out = new IcebergApplication().processRequest(args);
             Assertions.assertEquals("Operation successful? true", out);
-            System.out.println("Test 6 completed");
+            System.out.println("Test 7 completed");
             passed_tests += 1;
         } catch (Throwable t) {
             failed_tests.add("dropnamespace");

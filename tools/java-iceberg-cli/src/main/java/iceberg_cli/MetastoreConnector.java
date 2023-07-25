@@ -35,6 +35,8 @@ import org.apache.iceberg.PartitionField;
 public abstract class MetastoreConnector 
 {
     protected Long m_snapshotId = null;
+    protected Long fileRecordCount = 0L;
+    protected Long taskRecordCount = 0L;
 
     public MetastoreConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) {
     }
@@ -95,6 +97,14 @@ public abstract class MetastoreConnector
 
     public void setSnapshotId(Long snapshotId) {
         this.m_snapshotId = snapshotId;
+    }
+    
+    public Long getFileRecordCount() {
+        return fileRecordCount;
+    }
+
+    public Long getTaskRecordCount() {
+        return taskRecordCount;
     }
     
     @SuppressWarnings("serial")
