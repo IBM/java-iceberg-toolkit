@@ -51,6 +51,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.UpdateSchema;
+import org.apache.iceberg.UpdateProperties;
 import org.apache.iceberg.aws.s3.S3FileIO;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -194,6 +195,18 @@ public class IcebergConnector extends MetastoreConnector
      * {
      *  "drop":["c1","c2"]
      * }
+     * 
+     * The property changes are expected in the following format:
+     * SETTING key/value property
+     * {
+     *  "set_prop":[
+     *      {"key":"p1","value":"v1"}
+     *   ]
+     * }
+     * REMOVING property key
+     * {
+     *  "rm_prop":["p1","p2"]
+     * }
      *
      *
      * There are more ALTER operations that can be performed according to the documentation,
@@ -205,6 +218,8 @@ public class IcebergConnector extends MetastoreConnector
         final int OP_ADD = 1;
         final int OP_DROP = 2;
         final int OP_RENAME = 4;
+        final int OP_SET_PROP = 8;
+        final int OP_RM_PROP = 16;
         loadTable();
         UpdateSchema updateSchema = iceberg_table.updateSchema();
         JSONObject schemaSpecs =  new JSONObject(newSchema);
@@ -279,6 +294,45 @@ public class IcebergConnector extends MetastoreConnector
 
         // all good - commit changes
         updateSchema.commit();
+
+        // check for updates to table properties
+        UpdateProperties updateProperties = iceberg_table.updateProperties();
+        try {
+            JSONArray setProps = schemaSpecs.getJSONArray("set_prop");
+            for (int i = 0; i < setProps.length(); i++) {
+                try {
+                    JSONObject jo = setProps.getJSONObject(i);
+                    String key = jo.getString("key");
+                    String value = jo.getString("value");
+                    updateProperties.set(key, value);
+                    op |= OP_SET_PROP;
+                } catch (JSONException e) {
+                    System.out.println("Invalid key/value property.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no properties to set, move on
+        }
+
+        try {
+            JSONArray rmProps = schemaSpecs.getJSONArray("rm_prop");
+            for (int i = 0; i < rmProps.length(); i++) {
+                try {
+                    String key = rmProps.getString(i);
+                    updateProperties.remove(key);
+                    op |= OP_RM_PROP;
+                } catch (JSONException e) {
+                    System.out.println("Invalid property key.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no properties to remove, move on
+        }
+
+        updateProperties.commit();
+        
         return true;
     }
 
