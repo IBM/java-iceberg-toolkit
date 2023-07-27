@@ -280,12 +280,6 @@ public class IcebergConnector extends MetastoreConnector
             // no columns to rename, move on
         }
 
-        // have we altered anything?
-        if (op == OP_NONE) {
-            System.out.println("Unrecognized ALTER operation.");
-            return false;
-        }
-
         // confirm DROP wasn't bundled with any other ALTERs
         if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
             System.out.println("Cannot perform DROP along with other ALTER operations.");
@@ -333,6 +327,12 @@ public class IcebergConnector extends MetastoreConnector
 
         updateProperties.commit();
         
+        // have we altered anything?
+        if (op == OP_NONE) {
+            System.out.println("Unrecognized ALTER operation.");
+            return false;
+        }
+
         return true;
     }
 
