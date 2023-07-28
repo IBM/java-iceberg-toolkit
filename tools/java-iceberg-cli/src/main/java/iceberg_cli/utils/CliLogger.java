@@ -8,20 +8,20 @@ import org.apache.log4j.Logger;
 
 public class CliLogger {
 
-	private static Logger m_logger;
-	
-	public static Logger getLogger() {
-		return m_logger;
-	}
-	
-	public static void setupLogging() {
-		/* Initialize and then disable logging from the root logger. This is because
-		 * many 3rd party packages want to log output to the root logger which will
-		 * spam our logfiles with unwanted information.
-		 */
-		BasicConfigurator.configure();
+    private static Logger m_logger;
+
+    public static Logger getLogger() {
+        return m_logger;
+    }
+
+    public static void setupLogging() {
+        /* Initialize and then disable logging from the root logger. This is because
+         * many 3rd party packages want to log output to the root logger which will
+         * spam our logfiles with unwanted information.
+         */
+        BasicConfigurator.configure();
         Logger.getRootLogger().setLevel(Level.OFF);
-        
+
         /* Now setup our own logger which matches our typical logfile format. Since we
          * redirect stderr output to the log currently we'll setup a ConsoleAppender.
          * We can consider removing this and replacing with a file logger in the future.
@@ -35,5 +35,5 @@ public class CliLogger {
         m_logger.removeAllAppenders();
         m_logger.addAppender(ap);
         m_logger.setLevel(Level.INFO);
-	}
+    }
 }
