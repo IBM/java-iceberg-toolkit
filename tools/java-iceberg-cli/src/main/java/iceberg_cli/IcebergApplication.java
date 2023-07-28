@@ -75,7 +75,7 @@ public class IcebergApplication {
         // Set user specified scan filter, if any
         if (filterJsonString != null)
         	connector.setScanFilter(filterJsonString);
-        
+
         PrintUtils printUtils = new PrintUtils(connector, outputFormat);
         // Perform action
         switch (action) {
@@ -102,7 +102,7 @@ public class IcebergApplication {
             break;
         case "describe":
             if (tableName != null)
-                output = printUtils.printTableDetails(filterJsonString);
+                output = printUtils.printTableDetails();
             else if (namespace != null)
                 output = printUtils.printNamespaceDetails(namespace);
             break;

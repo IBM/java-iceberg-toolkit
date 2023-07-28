@@ -61,7 +61,7 @@ public class PrintUtils {
      * Get table details from MetastoreConnector and output to the user is the given format
      * @throws Exception 
      */
-    public String printTableDetails(String filter) throws Exception {
+    public String printTableDetails() throws Exception {
         Map<Integer, List<Map<String, String>>> planFileTasks = metaConn.getPlanFiles();
         Snapshot snapshot = metaConn.getCurrentSnapshot();
         Schema targetSchema = metaConn.getTableSchema();

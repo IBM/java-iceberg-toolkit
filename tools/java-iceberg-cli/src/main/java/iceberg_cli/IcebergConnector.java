@@ -96,7 +96,7 @@ public class IcebergConnector extends MetastoreConnector
     Credentials creds;
     Table iceberg_table;
     TableScan m_scan;
-    
+
     static Logger log = CliLogger.getLogger();
 
     public IcebergConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws IOException {
@@ -166,43 +166,43 @@ public class IcebergConnector extends MetastoreConnector
             log.info("Scan using provided snapshotid " + m_snapshotId);
         }
         if (m_scanFilter != null) {
-        	try {
-        		Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
-        		m_scan = m_scan.caseSensitive(false)
-        				.ignoreResiduals()
-        				.filter(filterExpr);
-        		log.info("Scan of '" + m_tableIdentifier + "' using provided filter: '" + m_scanFilter + "'");
-        	} catch (Exception e) {
-        		log.info("Scan of '" + m_tableIdentifier + "' with no filter due to invalid filter: '" + m_scanFilter + "'");
-        	}
+            try {
+                Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
+                m_scan = m_scan.caseSensitive(false)
+                        .ignoreResiduals()
+                        .filter(filterExpr);
+                log.info("Scan of '" + m_tableIdentifier + "' using provided filter: '" + m_scanFilter + "'");
+            } catch (Exception e) {
+                log.info("Scan of '" + m_tableIdentifier + "' with no filter due to invalid filter: '" + m_scanFilter + "'");
+            }
         }
     }
     
     public void logScanMetrics() {
-    	/* Iceberg APIs do not expose the metrics to the caller...this is because the metrics are
-    	 * 'incomplete' until the end of the scan...in 1.3.0 they provide an api m_scan.metricsReporter
-    	 * where you provide a custom MetricsReporter class which can get the metrics at the end of the
-    	 * scan...unfortunately this API only seems to return the metrics at the end of a row-level scan
-    	 * and not a file level scan. For now we'll pull the metrics via reflection, which appear to be 
-    	 * complete when we've finished iterating through scanTasks.
-    	 */
-		try {
-			Class<?> pifClass = Class.forName("org.apache.iceberg.BaseTableScan");
-			java.lang.reflect.Field pf = pifClass.getDeclaredField("scanMetrics");
-			pf.setAccessible(true);
-			ScanMetrics metrics = (ScanMetrics)pf.get(m_scan);
-			long numSkipped = metrics.skippedDataFiles().value();
-			long numScanned = metrics.resultDataFiles().value();
-			int pctSkipped = (int)(100*(numSkipped / (double)(numScanned + numSkipped)));
-         	log.info("Skipped: " + numSkipped 
-         			+ " Scanned: " + numScanned 
-         			+ " Skippct: " + pctSkipped);
+        /* Iceberg APIs do not expose the metrics to the caller...this is because the metrics are
+         * 'incomplete' until the end of the scan...in 1.3.0 they provide an api m_scan.metricsReporter
+         * where you provide a custom MetricsReporter class which can get the metrics at the end of the
+         * scan...unfortunately this API only seems to return the metrics at the end of a row-level scan
+         * and not a file level scan. For now we'll pull the metrics via reflection, which appear to be 
+         * complete when we've finished iterating through scanTasks.
+         */
+        try {
+            Class<?> pifClass = Class.forName("org.apache.iceberg.BaseTableScan");
+            java.lang.reflect.Field pf = pifClass.getDeclaredField("scanMetrics");
+            pf.setAccessible(true);
+            ScanMetrics metrics = (ScanMetrics)pf.get(m_scan);
+            long numSkipped = metrics.skippedDataFiles().value();
+            long numScanned = metrics.resultDataFiles().value();
+            int pctSkipped = (int)(100*(numSkipped / (double)(numScanned + numSkipped)));
+            log.info("Skipped: " + numSkipped 
+                    + " Scanned: " + numScanned 
+                    + " Skippct: " + pctSkipped);
 
-		} catch (Exception e) {
-			// Don't log the metrics
-		}
+        } catch (Exception e) {
+            // Don't log the metrics
+        }
     }
-    
+
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
         if (m_catalog.tableExists(m_tableIdentifier)) {
             if (overwrite) {
@@ -350,10 +350,10 @@ public class IcebergConnector extends MetastoreConnector
             return new ArrayList<List<String>>();
         IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(iceberg_table);
         if(m_scanFilter != null) {
-        	Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
-        	scanBuilder = scanBuilder.where(filterExpr).caseInsensitive();
+            Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
+            scanBuilder = scanBuilder.where(filterExpr).caseInsensitive();
         }
-        
+
         CloseableIterable<Record> records = scanBuilder.useSnapshot(snapshotId).build();
         List<List<String>> output = new ArrayList<List<String>>();
         for (Record record : records) {
@@ -396,7 +396,7 @@ public class IcebergConnector extends MetastoreConnector
         }
         
         logScanMetrics();
-        
+
         return tasks;
     }
     
@@ -429,7 +429,7 @@ public class IcebergConnector extends MetastoreConnector
         }
         
         logScanMetrics();
-        
+
         return tasks;
     }
     
