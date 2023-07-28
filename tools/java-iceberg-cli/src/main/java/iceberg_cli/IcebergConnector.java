@@ -15,6 +15,8 @@ import java.net.URISyntaxException;
 
 import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
+import org.apache.iceberg.expressions.Expression;
+import org.apache.iceberg.expressions.ExpressionParser;
 import org.apache.iceberg.hadoop.HadoopInputFile;
 import org.apache.iceberg.exceptions.NamespaceNotEmptyException;
 
@@ -37,6 +39,7 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.FileAppender;
 import org.apache.iceberg.io.LocationProvider;
 import org.apache.iceberg.io.OutputFile;
+import org.apache.iceberg.metrics.ScanMetrics;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.hive.HiveCatalog;
 import org.apache.iceberg.data.parquet.GenericParquetReaders;
@@ -57,6 +60,7 @@ import org.apache.iceberg.catalog.TableIdentifier;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.SerializableSupplier;
+import org.apache.log4j.Logger;
 import org.apache.parquet.ParquetReadOptions;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.column.ParquetProperties;
@@ -73,6 +77,7 @@ import org.json.JSONObject;
 
 import com.google.common.io.Files;
 
+import iceberg_cli.utils.CliLogger;
 import iceberg_cli.catalog.CustomCatalog;
 import iceberg_cli.utils.Credentials;
 import iceberg_cli.utils.DataConversion;
@@ -91,6 +96,8 @@ public class IcebergConnector extends MetastoreConnector
     Credentials creds;
     Table iceberg_table;
     TableScan m_scan;
+    
+    static Logger log = CliLogger.getLogger();
 
     public IcebergConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws IOException {
         // TODO: Get type of catalog that the user wants and then initialize accordingly
@@ -156,7 +163,44 @@ public class IcebergConnector extends MetastoreConnector
         m_scan = iceberg_table.newScan();
         if (m_snapshotId != null) {
             m_scan = m_scan.useSnapshot(m_snapshotId);
+            log.info("Scan using provided snapshotid " + m_snapshotId);
         }
+        if (m_scanFilter != null) {
+        	try {
+        		Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
+        		m_scan = m_scan.caseSensitive(false)
+        				.ignoreResiduals()
+        				.filter(filterExpr);
+        		log.info("Scan of '" + m_tableIdentifier + "' using provided filter: '" + m_scanFilter + "'");
+        	} catch (Exception e) {
+        		log.info("Scan of '" + m_tableIdentifier + "' with no filter due to invalid filter: '" + m_scanFilter + "'");
+        	}
+        }
+    }
+    
+    public void logScanMetrics() {
+    	/* Iceberg APIs do not expose the metrics to the caller...this is because the metrics are
+    	 * 'incomplete' until the end of the scan...in 1.3.0 they provide an api m_scan.metricsReporter
+    	 * where you provide a custom MetricsReporter class which can get the metrics at the end of the
+    	 * scan...unfortunately this API only seems to return the metrics at the end of a row-level scan
+    	 * and not a file level scan. For now we'll pull the metrics via reflection, which appear to be 
+    	 * complete when we've finished iterating through scanTasks.
+    	 */
+		try {
+			Class<?> pifClass = Class.forName("org.apache.iceberg.BaseTableScan");
+			java.lang.reflect.Field pf = pifClass.getDeclaredField("scanMetrics");
+			pf.setAccessible(true);
+			ScanMetrics metrics = (ScanMetrics)pf.get(m_scan);
+			long numSkipped = metrics.skippedDataFiles().value();
+			long numScanned = metrics.resultDataFiles().value();
+			int pctSkipped = (int)(100*(numSkipped / (double)(numScanned + numSkipped)));
+         	log.info("Skipped: " + numSkipped 
+         			+ " Scanned: " + numScanned 
+         			+ " Skippct: " + pctSkipped);
+
+		} catch (Exception e) {
+			// Don't log the metrics
+		}
     }
     
     public boolean createTable(Schema schema, PartitionSpec spec, boolean overwrite) {
@@ -305,6 +349,11 @@ public class IcebergConnector extends MetastoreConnector
         if (snapshotId == null)
             return new ArrayList<List<String>>();
         IcebergGenerics.ScanBuilder scanBuilder = IcebergGenerics.read(iceberg_table);
+        if(m_scanFilter != null) {
+        	Expression filterExpr = ExpressionParser.fromJson(m_scanFilter);
+        	scanBuilder = scanBuilder.where(filterExpr).caseInsensitive();
+        }
+        
         CloseableIterable<Record> records = scanBuilder.useSnapshot(snapshotId).build();
         List<List<String>> output = new ArrayList<List<String>>();
         for (Record record : records) {
@@ -346,6 +395,8 @@ public class IcebergConnector extends MetastoreConnector
             tasks.put(index++, taskMapList);
         }
         
+        logScanMetrics();
+        
         return tasks;
     }
     
@@ -376,6 +427,8 @@ public class IcebergConnector extends MetastoreConnector
             }
             tasks.put(index++, taskMapList);
         }
+        
+        logScanMetrics();
         
         return tasks;
     }

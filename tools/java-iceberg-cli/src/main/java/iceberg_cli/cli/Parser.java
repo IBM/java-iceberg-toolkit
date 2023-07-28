@@ -85,6 +85,7 @@ public class Parser {
         Command describe = new Command("describe", "Get details of a table or a namespace");
         describe.addOption("--help", "Show this help message and exit");
         describe.addArgument("identifier", "Table or namespace identifier", true);
+        describe.addArgument("filter", "A json filter to apply when performing a scan", false);
         m_commands.put("describe", describe);
 
         Command alter = new Command("alter", "Alter a table");
@@ -101,6 +102,7 @@ public class Parser {
         Command files = new Command("files", "List data files of a table");
         files.addOption("--help", "Show this help message and exit");
         files.addArgument("identifier", "Table identifier", true);
+        files.addArgument("filter", "A json filter to apply when performing a scan", false);
         m_commands.put("files", files);
         
         Command list = new Command("list", "List tables or namespaces");
@@ -122,6 +124,7 @@ public class Parser {
         Command read = new Command("read", "Read from a table");
         read.addOption("--help", "Show this help message and exit");
         read.addArgument("identifier", "Table identifier", true);
+        read.addArgument("filter", "A json filter to apply when performing a scan", false);
         m_commands.put("read", read);
         
         Command rename = new Command("rename", "Rename a table a table");
@@ -155,6 +158,7 @@ public class Parser {
         Command tasks = new Command("tasks", "List scan tasks of a table");
         tasks.addOption("--help", "Show this help message and exit");
         tasks.addArgument("identifier", "Table identifier", true);
+        tasks.addArgument("filter", "A json filter to apply when performing file level scan", false);
         m_commands.put("tasks", tasks);
         
         Command type = new Command("type", "Fetch table type");
