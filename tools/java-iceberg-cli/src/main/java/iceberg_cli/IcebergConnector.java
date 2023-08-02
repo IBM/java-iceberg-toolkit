@@ -196,7 +196,7 @@ public class IcebergConnector extends MetastoreConnector
             int pctSkipped = (int)(100*(numSkipped / (double)(numScanned + numSkipped)));
             log.info("Skipped: " + numSkipped 
                     + " Scanned: " + numScanned 
-                    + " Skippct: " + pctSkipped);
+                    + " Percent Skipped: " + pctSkipped);
 
         } catch (Exception e) {
             // Don't log the metrics
