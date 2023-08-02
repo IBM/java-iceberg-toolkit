@@ -4,6 +4,7 @@
 
 package iceberg_cli;
 
+import iceberg_cli.utils.CliLogger;
 import iceberg_cli.utils.SocketServer;
 
 public class Main {
@@ -12,7 +13,10 @@ public class Main {
             // Validate arguments
             if (args.length <= 0)
                 throw new ArrayIndexOutOfBoundsException("No arguments provided");
-            
+
+            // Setup logging library
+            CliLogger.setupLogging();
+
             // Start the server or run command
             if (args[0].equalsIgnoreCase("server")) {
                 SocketServer server = new SocketServer();

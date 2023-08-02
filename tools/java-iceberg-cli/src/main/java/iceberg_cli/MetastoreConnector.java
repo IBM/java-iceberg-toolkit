@@ -36,6 +36,8 @@ public abstract class MetastoreConnector
 {
     protected Long m_snapshotId = null;
 
+    protected String m_scanFilter = null;
+
     public MetastoreConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) {
     }
     
@@ -95,6 +97,10 @@ public abstract class MetastoreConnector
 
     public void setSnapshotId(Long snapshotId) {
         this.m_snapshotId = snapshotId;
+    }
+    
+    public void setScanFilter(String filter) {
+        this.m_scanFilter = filter;
     }
     
     @SuppressWarnings("serial")

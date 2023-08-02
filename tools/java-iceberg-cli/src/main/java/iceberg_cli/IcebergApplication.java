@@ -47,6 +47,7 @@ public class IcebergApplication {
         action = parser.command();
         tableName = parser.table();
         String schemaJsonString = parser.getPositionalArg("schema");
+        String filterJsonString = parser.getPositionalArg("filter");
         
         // Validate identifier
         validateIdentifier();
@@ -71,6 +72,10 @@ public class IcebergApplication {
         if (snapshotId != null)
             connector.setSnapshotId(Long.valueOf(snapshotId));
         
+        // Set user specified scan filter, if any
+        if (filterJsonString != null)
+        	connector.setScanFilter(filterJsonString);
+
         PrintUtils printUtils = new PrintUtils(connector, outputFormat);
         // Perform action
         switch (action) {

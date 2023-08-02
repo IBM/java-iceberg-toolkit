@@ -43,10 +43,20 @@ class FunctionalTest {
     static MetastoreConnector metaConn;
     static String namespace;
     static String tableName;
-    static Integer total_tests = 7;
+    static Integer total_tests = 0;
     static Integer passed_tests = 0;
     static ArrayList <String> failed_tests = new ArrayList<String>();
     
+    static void markPass() {
+        passed_tests++;
+        total_tests++;
+    }
+
+    static void markFail(String test) {
+        failed_tests.add(test);
+        total_tests++;
+    }
+
     @BeforeAll
     static void setup() {
         String uri = System.getenv("URI");
@@ -92,7 +102,7 @@ class FunctionalTest {
             boolean status = metaConn.createNamespace(nmspc);
             Assertions.assertEquals(true, status);
             System.out.println("Test 1 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
             failed_tests.add("createnamespace");
             throw new ServletException("Error: " + t.getMessage(), t);
@@ -110,9 +120,9 @@ class FunctionalTest {
             boolean status = metaConn.createTable(schema, null, false);
             Assertions.assertEquals(true, status);
             System.out.println("Test 2 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("createtable");
+            markFail("createtable");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -128,9 +138,9 @@ class FunctionalTest {
             List<List<String>> actual = metaConn.readTable();
             Assertions.assertEquals(expected, actual);    
             System.out.println("Test 3 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("reademptytable");
+            markFail("reademptytable");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -147,9 +157,9 @@ class FunctionalTest {
             boolean status = metaConn.commitTable(dataFiles);
             Assertions.assertEquals(true, status); 
             System.out.println("Test 4 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("writetable");
+            markFail("writetable");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -165,9 +175,9 @@ class FunctionalTest {
             List<List<String>> actual = metaConn.readTable();
             Assertions.assertEquals(expected, actual);    
             System.out.println("Test 5 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("readtable");
+            markFail("readtable");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -197,9 +207,9 @@ class FunctionalTest {
             status = metaConnDup.dropTable();
             Assertions.assertEquals(true, status);
             System.out.println("Test 8 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("rewritefiles");
+            markFail("rewritefiles");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
@@ -213,9 +223,9 @@ class FunctionalTest {
             boolean status = metaConn.dropTable();
             Assertions.assertEquals(true, status);
             System.out.println("Test 6 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("droptable");
+            markFail("droptable");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }    
@@ -231,9 +241,9 @@ class FunctionalTest {
             boolean status = metaConn.dropNamespace(nmspc);
             Assertions.assertEquals(true, status);
             System.out.println("Test 7 completed");
-            passed_tests += 1;
+            markPass();
         } catch (Throwable t) {
-            failed_tests.add("dropnamespace");
+            markFail("dropnamespace");
             throw new ServletException("Error: " + t.getMessage(), t);
         }
     }
