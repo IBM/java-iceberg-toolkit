@@ -147,16 +147,28 @@ Positional Arguments:
   identifier           Table or namespace identifier
   schema               Create a table using this schema
 ```
+### Config File
+
+The toolkit allows users to specify catalog configuration using a config file. The file is expected to be named as .java_iceberg_cli.yaml and is searched in the following locations:
+1- ICEBERG_CONFIG environment variable
+2- User home directory
 
 ### Security
 
+Credentials for AWS can be passed to the CLI as:
+```
+{'type':'AWS','credentials':{'AWS_ACCESS_KEY_ID':'<id>','AWS_SECRET_ACCESS_KEY':'<key>', 'ENDPOINT':'uri'}}
+```
+
+#### Kerberos
 To use Kerberos enabled Metastore you can use any of the following two options:
 
-1- Set up values in the config file (~/.java_iceberg_cli.yaml):
+1- Set up values in the config file:
 ```
 catalogs:
 - name: "default"
   type: "HIVE"
+  metastoreUri: <uri>
   properties: {...}
   conf:
    ...
@@ -183,13 +195,34 @@ KRB5PRINCIPAL=<principal>
 KRB5KEYTAB=<path_to_keytab>
 ```
 
-Likewise, to use SSL enabled Metastore, there are two options:
+### Plain Authentication
 
-1- Set up values in the config file (~/.java_iceberg_cli.yaml):
+To access Metastore that has PLAIN authentication mode enabled, there are two options:
+
+1- Set up values in the config file:
 ```
 catalogs:
 - name: "default"
   type: "HIVE"
+  metastoreUri: <uri>
+  properties: {...}
+  conf:
+   ...
+   hive.metastore.client.plain.username: "<username>"
+   hive.metastore.client.plain.password: "<pw>"
+   ...
+```
+
+### Connecting to SSL enabled Metastore
+
+To access SSL enabled Metastore, there are two options:
+
+1- Set up values in the config file:
+```
+catalogs:
+- name: "default"
+  type: "HIVE"
+  metastoreUri: <uri>
   properties: {...}
   conf:
    ...

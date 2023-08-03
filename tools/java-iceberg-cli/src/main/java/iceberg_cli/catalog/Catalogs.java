@@ -22,9 +22,12 @@ public class Catalogs {
         return catalogs;
     }
 
-    public CustomCatalog getCatalog(String catalogName) {
+    public CustomCatalog getCatalog(String catalogName, String metastoreUri) {
+        if (catalogName == null || metastoreUri == null)
+            return null;
+        
         for (CustomCatalog catalog : catalogs) {
-            if (catalog.getName().equalsIgnoreCase(catalogName)) {
+            if (catalog.getName().equalsIgnoreCase(catalogName) && catalog.getMetastoreUri().equalsIgnoreCase(metastoreUri)) {
                 return catalog;
             }
         }

@@ -35,6 +35,7 @@ public class CustomCatalog {
             this.type = type;
         }
     }
+    private String metastoreUri;
     private Map<String, String> properties;
     private Configuration conf;
 
@@ -58,17 +59,27 @@ public class CustomCatalog {
         this.properties = new HashMap<String, String>();
         this.conf = new HiveConf();
     }
-
-    public CustomCatalog(String name, CatalogType type, Map<String, String> props) {
+    
+    public CustomCatalog(String name, CatalogType type, String metastoreUri) {
         this.name = name;
         this.type = type;
+        this.metastoreUri = metastoreUri;
+        this.properties = new HashMap<String, String>();
+        this.conf = new HiveConf();
+    }
+
+    public CustomCatalog(String name, CatalogType type, String metastoreUri, Map<String, String> props) {
+        this.name = name;
+        this.type = type;
+        this.metastoreUri = metastoreUri;
         this.properties = props;
         this.conf = new HiveConf();
     }
 
-    public CustomCatalog(String name, CatalogType type, Map<String, String> props, HiveConf conf) {
+    public CustomCatalog(String name, CatalogType type, String metastoreUri, Map<String, String> props, HiveConf conf) {
         this.name = name;
         this.type = type;
+        this.metastoreUri = metastoreUri;
         this.properties = props;
         this.conf = conf;
     }
@@ -79,6 +90,10 @@ public class CustomCatalog {
 
     public CatalogType getType() {
         return type;
+    }
+    
+    public String getMetastoreUri() {
+        return metastoreUri;
     }
 
     @JsonIgnore
@@ -110,6 +125,10 @@ public class CustomCatalog {
 
     public void setType(CatalogType type) {
         this.type = type;
+    }
+    
+    public void setMetastoreUri(String metastoreUri) {
+        this.metastoreUri = metastoreUri;
     }
 
     @JsonIgnore
@@ -157,6 +176,8 @@ public class CustomCatalog {
         sb.append("Name: " + name);
         sb.append("\n");
         sb.append("Type: " + type);
+        sb.append("\n");
+        sb.append("Metastore Uri: " + metastoreUri);
         sb.append("\n");
         sb.append("Properties: " + properties);
         sb.append("\n");
