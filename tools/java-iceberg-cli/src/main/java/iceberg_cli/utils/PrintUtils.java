@@ -9,6 +9,7 @@ import java.util.*;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.PartitionSpec;
 import org.json.JSONObject;
 
@@ -104,9 +105,13 @@ public class PrintUtils {
         java.util.List<Namespace> namespaces = metaConn.listNamespaces();
         ArrayList <String> namespace_location = new ArrayList<String>();
         for (Namespace nmspc : namespaces) {
-            String location = metaConn.loadNamespaceMetadata(nmspc).get("location");
-            String nmspc_str = nmspc.toString();
-            namespace_location.add(nmspc_str + ": " + location);
+            try {
+                String location = metaConn.loadNamespaceMetadata(nmspc).get("location");
+                String nmspc_str = nmspc.toString();
+                namespace_location.add(nmspc_str + ": " + location);
+            } catch (NoSuchNamespaceException e) {
+                // The namespace was dropped before we could fetch it's information
+            }
         }
         return output.listNamespaces(namespace_location);
     }
