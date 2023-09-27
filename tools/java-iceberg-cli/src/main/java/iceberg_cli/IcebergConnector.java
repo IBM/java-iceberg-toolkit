@@ -220,6 +220,8 @@ public class IcebergConnector extends MetastoreConnector
         final int OP_RENAME = 4;
         final int OP_SET_PROP = 8;
         final int OP_RM_PROP = 16;
+        final int UPDATE_SCHEMA = OP_ADD | OP_DROP | OP_RENAME;
+        final int UPDATE_PROP = OP_SET_PROP | OP_RM_PROP;
         loadTable();
         UpdateSchema updateSchema = iceberg_table.updateSchema();
         JSONObject schemaSpecs =  new JSONObject(newSchema);
@@ -280,19 +282,10 @@ public class IcebergConnector extends MetastoreConnector
             // no columns to rename, move on
         }
 
-        // confirm DROP wasn't bundled with any other ALTERs
-        if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
-            System.out.println("Cannot perform DROP along with other ALTER operations.");
-            return false;
-        }
-
-        // all good - commit changes
-        updateSchema.commit();
-
         // check for updates to table properties
         UpdateProperties updateProperties = iceberg_table.updateProperties();
         try {
-            JSONArray setProps = schemaSpecs.getJSONArray("set_prop");
+            JSONArray setProps = schemaSpecs.getJSONArray("set_property");
             for (int i = 0; i < setProps.length(); i++) {
                 try {
                     JSONObject jo = setProps.getJSONObject(i);
@@ -310,7 +303,7 @@ public class IcebergConnector extends MetastoreConnector
         }
 
         try {
-            JSONArray rmProps = schemaSpecs.getJSONArray("rm_prop");
+            JSONArray rmProps = schemaSpecs.getJSONArray("remove_property");
             for (int i = 0; i < rmProps.length(); i++) {
                 try {
                     String key = rmProps.getString(i);
@@ -324,13 +317,25 @@ public class IcebergConnector extends MetastoreConnector
         } catch (JSONException e) {
             // no properties to remove, move on
         }
-
-        updateProperties.commit();
         
+        // confirm DROP wasn't bundled with any other ALTERs
+        if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
+            System.out.println("Cannot perform DROP along with other ALTER operations.");
+            return false;
+        }
+
         // have we altered anything?
         if (op == OP_NONE) {
             System.out.println("Unrecognized ALTER operation.");
             return false;
+        }
+
+        // all good - commit changes
+        if (op & UPDATE_SCHEMA) {
+            updateSchema.commit();
+        }
+        if (op & UPDATE_PROP) {
+            updateProperties.commit();
         }
 
         return true;
