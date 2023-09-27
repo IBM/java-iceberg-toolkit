@@ -331,10 +331,10 @@ public class IcebergConnector extends MetastoreConnector
         }
 
         // all good - commit changes
-        if (op & UPDATE_SCHEMA) {
+        if ((op & UPDATE_SCHEMA) != 0) {
             updateSchema.commit();
         }
-        if (op & UPDATE_PROP) {
+        if ((op & UPDATE_PROP) != 0) {
             updateProperties.commit();
         }
 
