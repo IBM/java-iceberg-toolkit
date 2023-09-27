@@ -199,13 +199,13 @@ public class IcebergConnector extends MetastoreConnector
      * The property changes are expected in the following format:
      * SETTING key/value property
      * {
-     *  "set_prop":[
+     *  "set_property":[
      *      {"key":"p1","value":"v1"}
      *   ]
      * }
      * REMOVING property key
      * {
-     *  "rm_prop":["p1","p2"]
+     *  "remove_property":["p1","p2"]
      * }
      *
      *
