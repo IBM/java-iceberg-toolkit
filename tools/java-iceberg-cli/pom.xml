@@ -26,11 +26,6 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro</artifactId>
-                <version>1.11.3</version>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
                 <version>3.9.1</version>
@@ -249,6 +244,11 @@
                 <groupId>org.apache.parquet</groupId>
                 <artifactId>parquet-avro</artifactId>
                 <version>1.12.3</version>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>1.11.3</version>
+            </dependency>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
