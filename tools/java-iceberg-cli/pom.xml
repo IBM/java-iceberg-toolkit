@@ -17,6 +17,7 @@
         <org.apache.iceberg.version>1.1.0</org.apache.iceberg.version>
         <org.apache.hadoop.version>3.3.5</org.apache.hadoop.version>
         <org.apache.hive.version>4.0.0-alpha-2</org.apache.hive.version>
+        <ch.qos.logback.version>1.4.12</ch.qos.logback.version>
         <software.amazon.awssdk.version>2.17.272</software.amazon.awssdk.version>
         <org.junit.jupiter.version>5.8.1</org.junit.jupiter.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -25,6 +26,21 @@
 	
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${ch.qos.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${ch.qos.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>3.9.1</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
                 <artifactId>avatica</artifactId>
@@ -239,6 +255,11 @@
                 <groupId>org.apache.parquet</groupId>
                 <artifactId>parquet-avro</artifactId>
                 <version>1.12.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>1.11.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>

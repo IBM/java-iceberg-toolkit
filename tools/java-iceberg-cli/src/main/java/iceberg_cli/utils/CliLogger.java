@@ -5,6 +5,9 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.EnhancedPatternLayout;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 
 public class CliLogger {
 
@@ -21,6 +24,8 @@ public class CliLogger {
          */
         BasicConfigurator.configure();
         Logger.getRootLogger().setLevel(Level.OFF);
+        ch.qos.logback.classic.Logger slf4jLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ROOT_LOGGER_NAME);
+        slf4jLogger.setLevel(ch.qos.logback.classic.Level.OFF);
 
         /* Now setup our own logger which matches our typical logfile format. Since we
          * redirect stderr output to the log currently we'll setup a ConsoleAppender.
