@@ -89,6 +89,36 @@ public class SubcommandParser {
             String[] levels = identifier.split("\\.");
             if (levels.length < 2)
                 throw new ParseException("Invalid identifier");
+            else if (levels.length > 2) {
+                String prev_str = null;
+                String cur_str = null;
+                String[] new_levels = new String[2];
+                int new_level_idx = 0;
+                int len;
+                for (int i = 0; i < levels.length; i++) {
+                    System.out.println("l:" + levels[i]);
+                    if (prev_str != null) {
+                        cur_str = prev_str + "." + levels[i];
+                    } else {
+                        cur_str = levels[i];
+                    }
+                    len = cur_str.length();
+                    if (cur_str.charAt(len-1) == '\\')
+                        prev_str = cur_str;
+                    else {
+                        new_levels[new_level_idx] = cur_str;
+                        new_level_idx ++;
+                        if (new_level_idx == 2 && (new_level_idx < (levels.length - 1)))
+                            throw new ParseException("Invalid identifier");
+                    }
+                }
+                /*
+                if (new_levels.length < 2 || new_levels.length > 2)
+                    throw new ParseException("Invalid identifier");
+                */
+                
+                levels = new_levels;
+            }
             m_namespace = levels[0];
             m_table = levels[1];
         } else {

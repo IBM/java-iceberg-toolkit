@@ -46,6 +46,7 @@ public class IcebergApplication {
         namespace = parser.namespace();
         action = parser.command();
         tableName = parser.table();
+        System.out.println("tableName=" + tableName);
         String schemaJsonString = parser.getPositionalArg("schema");
         String filterJsonString = parser.getPositionalArg("filter");
         
