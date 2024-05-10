@@ -213,6 +213,12 @@ catalogs:
    ...
 ```
 
+2- Set up the following environment variables:
+```
+METASTORE_CLIENT_PLAIN_USERNAME=<username>
+METASTORE_CLIENT_PLAIN_PASSWORD=<pw>
+```
+
 ### Connecting to SSL enabled Metastore
 
 To access SSL enabled Metastore, there are two options:
@@ -241,6 +247,28 @@ METASTORE_KEYSTORE_PATH=<path_to_keystore>
 METASTORE_KEYSTORE_PASSWORD=<password>
 METASTORE_TRUSTSTORE_PATH=<path_to_truststore>
 METASTORE_TRUSTSTORE_PASSWORD=<password>
+```
+
+### Configure manifest caching
+
+1- Set up values in the config file:
+```
+catalogs:
+- name: "default"
+  type: "HIVE"
+  metastoreUri: <uri>
+  properties: {...}
+  conf:
+   ...
+   io.manifest.cache-enabled: "true"
+   io.manifest.cache.expiration-interval-ms: "<time_in_milliseconds>"
+   ...
+```
+
+2- Set up the following environment variables:
+```
+ICEBERG_MANIFEST_CACHE_ENABLED="true"
+ICEBERG_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS="<time_in_milliseconds>"
 ```
 
 ### Sample CLI Commands
