@@ -54,6 +54,7 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.UpdateSchema;
+import org.apache.iceberg.UpdateProperties;
 import org.apache.iceberg.aws.s3.S3FileIO;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
@@ -238,6 +239,18 @@ public class IcebergConnector extends MetastoreConnector
      * {
      *  "drop":["c1","c2"]
      * }
+     * 
+     * The property changes are expected in the following format:
+     * SETTING key/value property
+     * {
+     *  "set_property":[
+     *      {"key":"p1","value":"v1"}
+     *   ]
+     * }
+     * REMOVING property key
+     * {
+     *  "remove_property":["p1","p2"]
+     * }
      *
      *
      * There are more ALTER operations that can be performed according to the documentation,
@@ -249,6 +262,10 @@ public class IcebergConnector extends MetastoreConnector
         final int OP_ADD = 1;
         final int OP_DROP = 2;
         final int OP_RENAME = 4;
+        final int OP_SET_PROP = 8;
+        final int OP_RM_PROP = 16;
+        final int UPDATE_SCHEMA = OP_ADD | OP_DROP | OP_RENAME;
+        final int UPDATE_PROP = OP_SET_PROP | OP_RM_PROP;
         loadTable();
         UpdateSchema updateSchema = iceberg_table.updateSchema();
         JSONObject schemaSpecs =  new JSONObject(newSchema);
@@ -309,20 +326,62 @@ public class IcebergConnector extends MetastoreConnector
             // no columns to rename, move on
         }
 
-        // have we altered anything?
-        if (op == OP_NONE) {
-            System.out.println("Unrecognized ALTER operation.");
-            return false;
+        // check for updates to table properties
+        UpdateProperties updateProperties = iceberg_table.updateProperties();
+        try {
+            JSONArray setProps = schemaSpecs.getJSONArray("set_property");
+            for (int i = 0; i < setProps.length(); i++) {
+                try {
+                    JSONObject jo = setProps.getJSONObject(i);
+                    String key = jo.getString("key");
+                    String value = jo.getString("value");
+                    updateProperties.set(key, value);
+                    op |= OP_SET_PROP;
+                } catch (JSONException e) {
+                    System.out.println("Invalid key/value property.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no properties to set, move on
         }
 
+        try {
+            JSONArray rmProps = schemaSpecs.getJSONArray("remove_property");
+            for (int i = 0; i < rmProps.length(); i++) {
+                try {
+                    String key = rmProps.getString(i);
+                    updateProperties.remove(key);
+                    op |= OP_RM_PROP;
+                } catch (JSONException e) {
+                    System.out.println("Invalid property key.");
+                    return false;
+                }
+            }
+        } catch (JSONException e) {
+            // no properties to remove, move on
+        }
+        
         // confirm DROP wasn't bundled with any other ALTERs
         if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
             System.out.println("Cannot perform DROP along with other ALTER operations.");
             return false;
         }
 
+        // have we altered anything?
+        if (op == OP_NONE) {
+            System.out.println("Unrecognized ALTER operation.");
+            return false;
+        }
+
         // all good - commit changes
-        updateSchema.commit();
+        if ((op & UPDATE_SCHEMA) != 0) {
+            updateSchema.commit();
+        }
+        if ((op & UPDATE_PROP) != 0) {
+            updateProperties.commit();
+        }
+
         return true;
     }
 

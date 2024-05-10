@@ -91,7 +91,7 @@ public class Parser {
         Command alter = new Command("alter", "Alter a table");
         alter.addOption("--help", "Show this help message and exit");
         alter.addArgument("identifier", "Table or namespace identifier", true);
-        create.addArgument("schema", "Alter a table using this schema");
+        alter.addArgument("schema", "Alter a table using this schema");
         m_commands.put("alter", alter);
 
         Command drop = new Command("drop", "Drop a table or a namespace");
