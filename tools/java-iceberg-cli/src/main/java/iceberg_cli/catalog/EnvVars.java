@@ -3,8 +3,13 @@ package iceberg_cli.catalog;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 
+import static org.apache.iceberg.CatalogProperties.IO_MANIFEST_CACHE_ENABLED;
+import static org.apache.iceberg.CatalogProperties.IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS;
+
 public enum EnvVars {
     HADOOP_AUTHENTICATION ("hadoop.security.authentication"),
+    ICEBERG_MANIFEST_CACHE_ENABLED (IO_MANIFEST_CACHE_ENABLED),
+    ICEBERG_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS (IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS),
     METASTORE_URI (MetastoreConf.ConfVars.THRIFT_URIS),
     METASTORE_WAREHOUSE (MetastoreConf.ConfVars.WAREHOUSE),
     METASTORE_SASL_ENABLED (MetastoreConf.ConfVars.USE_THRIFT_SASL),
@@ -19,23 +24,23 @@ public enum EnvVars {
     
     public final HiveConf.ConfVars hiveConf;
     public final MetastoreConf.ConfVars metaConf;
-    public final String hadoopConf;
+    public final String otherConf;
     
     private EnvVars(MetastoreConf.ConfVars var) {
         this.metaConf = var;
-        this.hadoopConf = null;
         this.hiveConf = null;
+        this.otherConf = null;
     }
     
     private EnvVars(String var) {
         this.metaConf = null;
-        this.hadoopConf = var;
         this.hiveConf = null;
+        this.otherConf = var;
     } 
     
     private EnvVars(HiveConf.ConfVars var) {
         this.metaConf = null;
-        this.hadoopConf = null;
         this.hiveConf = var;
+        this.otherConf = null;
     }
 }
