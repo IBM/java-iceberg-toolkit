@@ -4,8 +4,11 @@
 
 package iceberg_cli.utils;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 public class StringUtils {
     private static final String BEGINNING_QUOTES = "^\"|^'";
@@ -16,6 +19,7 @@ public class StringUtils {
      * @param message
      * @return list of arguments
      * @throws IllegalArgumentException
+     * @throws IOException
      * 
      * Steps:
      * 1- Get space delimited tokens
@@ -27,7 +31,7 @@ public class StringUtils {
      * "a \"ab c\" d" => ["a", "ab c", d"]
      * "a '\"abc\" 1' f" => ["a", "abc 1", "f"]
      */
-    public static List<String> tokenizeQuotedString(String message) throws IllegalArgumentException {
+    public static List<String> tokenizeQuotedString(String message) throws IllegalArgumentException, IOException {
         List<String> tokens = new ArrayList<String>();
         
         if (message == null || message.isEmpty())
@@ -66,8 +70,11 @@ public class StringUtils {
         }
         
         // All quotes should have been found by now
-        if (findClosingQuote)
-            throw new IllegalArgumentException("Invalid message string");
+        if (findClosingQuote) {
+            Logger log = CliLogger.getLogger();
+            log.error("Invalid request, found mismatched quotes: " + message);
+            throw new IllegalArgumentException("Invalid request, found mismatched quotes");
+        }
         
         return tokens;
     }
@@ -98,7 +105,7 @@ public class StringUtils {
             // If the closing quote is not at the end of the token then, the input string is invalid.
             // Such as, a 'bc'e f
             if (index != delimitedToken.length() - 1)
-                throw new IllegalArgumentException("Invalid message string");
+                throw new IllegalArgumentException("Invalid request, found closing quote before end of the space delimited word");
             
             // Found the closing quote
             tokens.add(token.replaceAll(ENCLOSING_QUOTES, "").trim());
