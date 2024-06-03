@@ -256,6 +256,8 @@ class FunctionalTest {
             System.out.println("List of Failed Test Cases: " + failed_tests);
             
         }
+        
+        metaConn.close();
     }
     
 }

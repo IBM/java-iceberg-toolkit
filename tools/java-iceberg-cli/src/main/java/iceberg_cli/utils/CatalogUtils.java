@@ -19,13 +19,15 @@ public class CatalogUtils {
         if (table != null) {
             String tableType = hiveConn.getTableType(namespace, table).toUpperCase();
             try {
-                if (TableFormat.valueOf(tableType) == TableFormat.ICEBERG)
+                if (TableFormat.valueOf(tableType) == TableFormat.ICEBERG) {
+                    hiveConn.close();
                     return new IcebergConnector(catalog, namespace, table, creds);
+                }
             } catch (IllegalArgumentException e) {
                 return hiveConn;
             }
         }
-        
+        hiveConn.close();
         return new IcebergConnector(catalog, namespace, table, creds);
     }
     

@@ -70,6 +70,7 @@ class TestAlterTable {
             String dataFiles = con.writeTable(record, null);
             status = con.commitTable(dataFiles);
             Assertions.assertEquals(true, status);
+            con.close();
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }
@@ -85,6 +86,7 @@ class TestAlterTable {
             Namespace nmspc = Namespace.of(namespace);
             status = con.dropNamespace(nmspc);
             Assertions.assertEquals(true, status);
+            con.close();
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }
@@ -115,6 +117,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -147,6 +150,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -170,6 +174,7 @@ class TestAlterTable {
             con.loadTable(); // reload table after alter
             String newSchema = con.getTableSchema().toString().replaceAll("\\s+", " ");
             Assertions.assertEquals("table { 1: c1: required int 2: col2: optional string 3: c3: required double }", newSchema);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -202,6 +207,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -222,6 +228,7 @@ class TestAlterTable {
             String schema = "{\"add\":[{\"name\":\"c4\",\"type\":\"boolean\"}],\"rename\":[{\"name\":\"c2\",\"newName\":\"col2\"}],\"drop\":[\"c1\"]}";
             boolean status = con.alterTable(schema);
             Assertions.assertEquals(false, status);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
