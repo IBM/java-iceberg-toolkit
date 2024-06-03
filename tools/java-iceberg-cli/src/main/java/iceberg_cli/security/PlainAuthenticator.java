@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.security.alias.CredentialProvider;
+import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 
@@ -25,13 +26,31 @@ public class PlainAuthenticator {
         getCredentials();
     }
     
-    
     public void login() throws IOException {
         catalog.setConf(MetastoreConf.ConfVars.USE_THRIFT_SASL, "false");
         catalog.setConf(MetastoreConf.ConfVars.METASTORE_CLIENT_AUTH_MODE, authMode);
         catalog.setConf(MetastoreConf.ConfVars.EXECUTE_SET_UGI, "false");
         
-        String credUrl = createCredFile();
+        String fileName = String.format("hms_auth_%s.%s", Thread.currentThread().getId(), JavaKeyStoreProvider.SCHEME_NAME);
+        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + testDataDir + File.separator + fileName;
+        Configuration credConf = new Configuration();
+        credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
+        CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
+    
+        // Check if a credential entry exists for the provided username
+        CredentialEntry entry = provider.getCredentialEntry(username);
+        if (entry == null) {
+            provider.createCredentialEntry(username, password.toCharArray());
+            provider.flush();
+        } else if (!(String.valueOf(entry.getCredential()).equals(password))) {
+            // Check if the entry token is not the same as the provided token
+            // for a username then, recreate an entry. This can happen as a
+            // user can have multiple tokens.
+            provider.deleteCredentialEntry(username);
+            provider.createCredentialEntry(username, password.toCharArray());
+            provider.flush();
+        }
+        
         catalog.setConf(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
     }
     
@@ -47,21 +66,5 @@ public class PlainAuthenticator {
         // Validate password
         if (password == null)
             throw new Exception("Password is required for plain authentication");
-    }
-    
-    private String createCredFile() throws IOException {
-        String fileName = "hms_auth_" + username + "_" + password + "." + JavaKeyStoreProvider.SCHEME_NAME;
-        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + testDataDir + File.separator + fileName;
-        Configuration credConf = new Configuration();
-        credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
-        CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
-    
-        // Check if the credential entry already exists
-        if (provider.getCredentialEntry(username) == null) {
-            provider.createCredentialEntry(username, password.toCharArray());
-            provider.flush();
-        }
-    
-        return credUrl;
-    }
+    } 
 }
