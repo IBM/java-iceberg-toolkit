@@ -36,17 +36,24 @@ public class SocketServer {
     private final String unixAddress = "/tmp/iceberg_service.server";
     private final ServerSocketChannel serverChannel;
     private final ExecutorService pool;
-    private final Integer minNumThreads = 10;
+    private final Integer numThreads;
     
     private static Logger log;
     
     /**
      * Create a serverChannel bound to the unixAddress path.
      * Create a pool of threads that can process multiple clients.
-     * @throws IOException
+     * @throws Exception
      */
-    public SocketServer() throws IOException {
+    public SocketServer() throws Exception {
         log = CliLogger.getLogger();
+        
+        // Set minimum number of threads
+        int numProcessors = Runtime.getRuntime().availableProcessors();
+        if (numProcessors < 1)
+            throw new Exception("Number of available processors cannot be less than one");
+        else
+            numThreads = numProcessors;
         
         UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(unixAddress);
         serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
@@ -59,9 +66,7 @@ public class SocketServer {
         serverChannel.bind(socketAddress);
         
         // Create a pool of fixed number of threads for handling the client connections
-        String s_numThreads = System.getenv("ICEBERG_TOOLKIT_NUM_THREADS");
-        int numThreads = (s_numThreads == null) ? minNumThreads : Integer.valueOf(s_numThreads);
-        pool = Executors.newFixedThreadPool(numThreads < minNumThreads ? minNumThreads : numThreads);
+        pool = Executors.newFixedThreadPool(numThreads);
     }
     
     /**
