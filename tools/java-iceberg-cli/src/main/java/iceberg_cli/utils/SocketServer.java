@@ -67,6 +67,13 @@ public class SocketServer {
         
         // Create a pool of fixed number of threads for handling the client connections
         pool = Executors.newFixedThreadPool(numThreads);
+        
+        // Add termination hook
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                stopServer();
+            }
+        });
     }
     
     /**
@@ -97,12 +104,16 @@ public class SocketServer {
             if (!pool.awaitTermination(120, TimeUnit.SECONDS)) {
                 pool.shutdownNow();
             }
+            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+                System.err.println("Pool did not terminate");
+            }
             serverChannel.close();
             Files.deleteIfExists(Path.of(unixAddress));
         } catch (IOException ioExp) {
             ioExp.getStackTrace();
         } catch (InterruptedException intrExp) {
             pool.shutdownNow();
+            Thread.currentThread().interrupt();
         } finally {
             PlainAuthenticator.cleanup();
         }
@@ -163,6 +174,7 @@ public class SocketServer {
          */
         private Optional<String> readSocketMessage(SocketChannel channel) throws IOException {
             ByteBuffer buffer = ByteBuffer.allocate(MAX_BUF_LEN);
+            buffer.clear();
             int bytesRead = channel.read(buffer);
             if (bytesRead < 0)
                 return Optional.empty();
