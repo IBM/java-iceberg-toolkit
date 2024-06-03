@@ -19,7 +19,7 @@ public class PlainAuthenticator {
     private static final String authMode = "PLAIN";
     private static final String passwordEnvVar = "METASTORE_CLIENT_PLAIN_PASSWORD";
     private static final String passwordConfVar = "hive.metastore.client.plain.password";
-    private static final String testDataDir = System.getProperty("java.io.tmpdir") + File.separator + "JavaHmsClient";
+    private static final String dataDir = System.getProperty("java.io.tmpdir") + File.separator + "JavaHmsClient";
     
     public PlainAuthenticator(CustomCatalog catalog) throws Exception {
         this.catalog = catalog;
@@ -32,7 +32,7 @@ public class PlainAuthenticator {
         catalog.setConf(MetastoreConf.ConfVars.EXECUTE_SET_UGI, "false");
         
         String fileName = String.format("hms_auth_%s.%s", Thread.currentThread().getId(), JavaKeyStoreProvider.SCHEME_NAME);
-        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + testDataDir + File.separator + fileName;
+        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + dataDir + File.separator + fileName;
         Configuration credConf = new Configuration();
         credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
         CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
@@ -52,6 +52,15 @@ public class PlainAuthenticator {
         }
         
         catalog.setConf(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
+    }
+    
+    public static void cleanup() {
+        File dir = new File(dataDir);
+        if (dir.exists()) {
+            for (String file : dir.list()) {
+                new File(dataDir, file).delete();
+            }
+        }
     }
     
     private void getCredentials() throws Exception {
