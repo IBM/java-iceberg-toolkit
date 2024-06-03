@@ -10,12 +10,14 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 import org.apache.iceberg.catalog.Namespace;
 import org.apache.iceberg.catalog.TableIdentifier;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
 
 import iceberg_cli.cli.OptionsParser;
 import iceberg_cli.cli.Parser;
 import iceberg_cli.utils.AwsCredentials;
 import iceberg_cli.utils.CatalogUtils;
+import iceberg_cli.utils.CliLogger;
 import iceberg_cli.utils.Credentials;
 import iceberg_cli.utils.PrintUtils;
 
@@ -23,12 +25,17 @@ public class IcebergApplication {
     private String namespace;
     private String tableName;
     private String action;
+    
+    private static Logger log;
+    
     /**
      * @param args
      * @return formatted result
      */
     public String processRequest( String[] args ) throws Exception
     {
+        log = CliLogger.getLogger();
+        
         String output = null;
         
         Parser parser = new Parser();
@@ -77,6 +84,9 @@ public class IcebergApplication {
         	connector.setScanFilter(filterJsonString);
 
         PrintUtils printUtils = new PrintUtils(connector, outputFormat);
+        
+        log.info(String.format("Processing %s action on namespace %s and table %s", action, namespace, tableName));
+        
         // Perform action
         switch (action) {
         case "read":
@@ -91,6 +101,7 @@ public class IcebergApplication {
                 // TODO: Get PartitionSpec from user 
                 PartitionSpec spec = PartitionSpec.unpartitioned();
                 output = "Operation successful? " + connector.createTable(schema, spec, overwrite);
+                log.info(String.format("Create table %s operation complete.", tableName));
             } else if (namespace != null) {
                 // Set default warehouse if no warehouse argument passed in
                 if (warehouse == null) {
@@ -98,6 +109,7 @@ public class IcebergApplication {
                     connector = CatalogUtils.getConnector(catalog, tableFormat, uri, warehouse, namespace, tableName, creds);
                 }
                 output = "Operation successful? " + connector.createNamespace(Namespace.of(namespace));
+                log.info(String.format("Create namespace %s operation complete.", namespace));
             }
             break;
         case "describe":
@@ -141,6 +153,7 @@ public class IcebergApplication {
             TableIdentifier tableOrigName = TableIdentifier.of(namespace, tableName);
             TableIdentifier tableNewName = TableIdentifier.parse(tableNewNameString);
             output = "Operation successful? " + connector.renameTable(tableOrigName, tableNewName);
+            log.info(String.format("Rename table %s operation complete.", tableName));
             break;
         case "schema":
             output = printUtils.printSchema();
@@ -159,25 +172,31 @@ public class IcebergApplication {
             String outputFile = parser.outputFile();
             String dataFiles = connector.writeTable(record, outputFile);
             output = "Operation successful? " + connector.commitTable(dataFiles);
+            log.info(String.format("Write table %s operation complete.", tableName));
             break;
         case "commit":
             String dataFile = parser.getPositionalArg("data-files");
             output = "Operation successful? " + connector.commitTable(dataFile);
+            log.info(String.format("Commit to table %s operation complete.", tableName));
             break;
         case "rewrite":
             String rwDataFiles = parser.getPositionalArg("data-files");
             output = "Operation successful? " + connector.rewriteFiles(rwDataFiles);
             break;
         case "drop":
-            if (tableName != null)
+            if (tableName != null) {
                 output = "Operation successful? " + connector.dropTable();
-            else if (namespace != null)
+                log.info(String.format("Drop table %s operation complete.", tableName));
+            } else if (namespace != null) {
                 output = "Operation successful? " + connector.dropNamespace(Namespace.of(namespace));
+                log.info(String.format("Drop namespace %s operation complete.", namespace));
+            }
             break;
         case "alter":
             if (schemaJsonString == null)
                throw new ParseException("Missing required argument: schema");
             output = "Operation successful? " + connector.alterTable(schemaJsonString);
+            log.info(String.format("Alter table %s operation complete.", tableName));
             break;
         default:
             System.err.println("Error: Invalid action");

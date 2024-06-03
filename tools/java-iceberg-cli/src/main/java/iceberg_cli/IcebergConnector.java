@@ -97,11 +97,13 @@ public class IcebergConnector extends MetastoreConnector
     Table iceberg_table;
     TableScan m_scan;
 
-    static Logger log = CliLogger.getLogger();
+    private static Logger log;
 
     public IcebergConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws IOException {
         // TODO: Get type of catalog that the user wants and then initialize accordingly
         super(catalog, namespace, tableName, creds);
+        
+        log = CliLogger.getLogger();
         
         // Initialize members
         this.creds = creds;
@@ -152,6 +154,8 @@ public class IcebergConnector extends MetastoreConnector
         if (table == null)
             throw new TableNotLoaded("ERROR Loading table: " + identifier);
         
+        log.info(String.format("Table %s loaded successfully", table.name()));
+        
         return table;
     }
     
@@ -161,9 +165,10 @@ public class IcebergConnector extends MetastoreConnector
         // Use snapshot passed by the user.
         // By default, use the latest snapshot.
         m_scan = iceberg_table.newScan();
+        log.info(String.format("Scanning table %s using default snapshot", iceberg_table.name()));
         if (m_snapshotId != null) {
             m_scan = m_scan.useSnapshot(m_snapshotId);
-            log.info("Scan using provided snapshotid " + m_snapshotId);
+            log.info(String.format("Scanning table %s using provided snapshotId %d", iceberg_table.name(), m_snapshotId));
         }
         if (m_scanFilter != null) {
             try {
@@ -171,9 +176,9 @@ public class IcebergConnector extends MetastoreConnector
                 m_scan = m_scan.caseSensitive(false)
                         .ignoreResiduals()
                         .filter(filterExpr);
-                log.info("Scan of '" + m_tableIdentifier + "' using provided filter: '" + m_scanFilter + "'");
+                log.info(String.format("Scanning table %s using provided filter", iceberg_table.name(), m_scanFilter));
             } catch (Exception e) {
-                log.info("Scan of '" + m_tableIdentifier + "' with no filter due to invalid filter: '" + m_scanFilter + "'");
+                log.error(String.format("Scanning table %s without a filter. Provided filter is invalid : %s", iceberg_table.name(), m_scanFilter));
             }
         }
     }
@@ -214,8 +219,12 @@ public class IcebergConnector extends MetastoreConnector
         }
         
         System.out.println("Creating the table " + m_tableIdentifier);
+        log.info(String.format("Created table %s", m_tableIdentifier));
+        
         m_catalog.createTable(m_tableIdentifier, schema, spec);
+        
         System.out.println("Table created successfully");
+        log.info(String.format("Table %s created successfully", m_tableIdentifier));
         
         return true;
     }
@@ -253,6 +262,8 @@ public class IcebergConnector extends MetastoreConnector
         UpdateSchema updateSchema = iceberg_table.updateSchema();
         JSONObject schemaSpecs =  new JSONObject(newSchema);
         int op = OP_NONE;
+        
+        log.info(String.format("Altering table %s", iceberg_table.name()));
 
         // ADD NEW COLUMNS
         try {
@@ -265,7 +276,9 @@ public class IcebergConnector extends MetastoreConnector
                     updateSchema.addColumn(name, Types.fromPrimitiveString(type));
                     op |= OP_ADD;
                 } catch (JSONException e) {
-                    System.out.println("Invalid new column schema.");
+                    String errMsg = String.format("Invalid add column schema for the table %s", iceberg_table.name());
+                    System.err.println(errMsg);
+                    log.error(errMsg);
                     return false;
                 }
             }
@@ -282,7 +295,9 @@ public class IcebergConnector extends MetastoreConnector
                     updateSchema.deleteColumn(colName);
                     op |= OP_DROP;
                 } catch (JSONException e) {
-                    System.out.println("Invalid drop column schema.");
+                    String errMsg = String.format("Invalid drop column schema for the table %s", iceberg_table.name());
+                    System.err.println(errMsg);
+                    log.error(errMsg);
                     return false;
                 }
             }
@@ -301,7 +316,9 @@ public class IcebergConnector extends MetastoreConnector
                     updateSchema.renameColumn(name, newName);
                     op |= OP_RENAME;
                 } catch (JSONException e) {
-                    System.out.println("Invalid rename column schema.");
+                    String errMsg = String.format("Invalid rename column schema for table %s", iceberg_table.name());
+                    System.err.println(errMsg);
+                    log.error(errMsg);
                     return false;
                 }
             }
@@ -311,13 +328,17 @@ public class IcebergConnector extends MetastoreConnector
 
         // have we altered anything?
         if (op == OP_NONE) {
-            System.out.println("Unrecognized ALTER operation.");
+            String msg = "Unrecognized ALTER operation on table " + iceberg_table.name();
+            System.err.println(msg);
+            log.error(msg);
             return false;
         }
 
         // confirm DROP wasn't bundled with any other ALTERs
         if ((op & OP_DROP) == OP_DROP && op != OP_DROP) {
-            System.out.println("Cannot perform DROP along with other ALTER operations.");
+            String msg = "Cannot perform DROP with other ALTER operations on table " + iceberg_table.name();
+            System.err.println(msg);
+            log.error(msg);
             return false;
         }
 
@@ -331,8 +352,10 @@ public class IcebergConnector extends MetastoreConnector
             loadTable();
         
         System.out.println("Dropping the table " + m_tableIdentifier);
+        log.info(String.format("Dropping table %s", m_tableIdentifier));
         if (m_catalog.dropTable(m_tableIdentifier)) {
             System.out.println("Table dropped successfully");
+            log.info(String.format("Table %s dropped successfully", m_tableIdentifier));
             return true;
         }
         return false;

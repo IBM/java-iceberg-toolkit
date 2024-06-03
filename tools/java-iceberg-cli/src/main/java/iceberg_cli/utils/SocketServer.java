@@ -6,11 +6,7 @@ package iceberg_cli.utils;
 
 import iceberg_cli.IcebergApplication;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileDescriptor;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.io.FileOutputStream;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.ByteBuffer;
@@ -26,6 +22,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
+
 /**
  * 
  * Creates a Unix domain socket server. For each connection,
@@ -39,12 +37,16 @@ public class SocketServer {
     private final ExecutorService pool;
     private final Integer minNumThreads = 10;
     
+    private static Logger log;
+    
     /**
      * Create a serverChannel bound to the unixAddress path.
      * Create a pool of threads that can process multiple clients.
      * @throws IOException
      */
     public SocketServer() throws IOException {
+        log = CliLogger.getLogger();
+        
         UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(unixAddress);
         serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
         // Delete the file if it already exists
@@ -113,6 +115,7 @@ public class SocketServer {
                 readSocketMessage(channel).ifPresent(message -> {
                     try {
                         String[] args = StringUtils.tokenizeQuotedString(message).toArray(new String[0]);
+                        log.info("Request: " + Arrays.toString(args));
                         // Process client request
                         String response = new IcebergApplication().processRequest(args).trim();
                         // Send back response from the IcebergApplication to the client
@@ -120,9 +123,11 @@ public class SocketServer {
                     } catch (Exception e) {
                         try {
                             // Send back error message to the Client
+                            log.error(e.getMessage());
                             sendMessage(channel, e.getMessage(), 1);
                         } catch (IOException ioExp) {
                             System.err.println(ioExp.getMessage());
+                            log.error(ioExp.getMessage());
                         }
                     }
                     return;
