@@ -26,6 +26,7 @@ import iceberg_cli.catalog.ConfigLoader;
 import iceberg_cli.catalog.CustomCatalog;
 import iceberg_cli.utils.AwsCredentials;
 import iceberg_cli.utils.Credentials;
+import iceberg_cli.utils.CliLogger;
 
 class TestAlterTable {
     static String uri, warehouse, aws;
@@ -45,6 +46,8 @@ class TestAlterTable {
         }
         // Create a dummy credentials object instead which will be populated using env variables
         creds = new AwsCredentials(new JSONObject());
+        
+        CliLogger.setupLogging();
     }
 
     CustomCatalog createCatalog(String namespace, String tablename) {
