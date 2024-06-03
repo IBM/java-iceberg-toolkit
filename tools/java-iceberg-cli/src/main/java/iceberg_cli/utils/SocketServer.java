@@ -5,6 +5,7 @@
 package iceberg_cli.utils;
 
 import iceberg_cli.IcebergApplication;
+import iceberg_cli.security.PlainAuthenticator;
 
 import java.io.IOException;
 import java.net.StandardProtocolFamily;
@@ -51,6 +52,9 @@ public class SocketServer {
         serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
         // Delete the file if it already exists
         Files.deleteIfExists(Path.of(unixAddress));
+        
+        PlainAuthenticator.cleanup();
+        
         // Bind to the socket Address
         serverChannel.bind(socketAddress);
         
@@ -89,10 +93,13 @@ public class SocketServer {
                 pool.shutdownNow();
             }
             serverChannel.close();
+            Files.deleteIfExists(Path.of(unixAddress));
         } catch (IOException ioExp) {
             ioExp.getStackTrace();
         } catch (InterruptedException intrExp) {
             pool.shutdownNow();
+        } finally {
+            PlainAuthenticator.cleanup();
         }
         System.out.println(String.format("%s : Server stopped listening",
                 new Timestamp(System.currentTimeMillis())));

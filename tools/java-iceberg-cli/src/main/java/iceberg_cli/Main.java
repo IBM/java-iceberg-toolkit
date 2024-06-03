@@ -6,6 +6,7 @@ package iceberg_cli;
 
 import iceberg_cli.utils.CliLogger;
 import iceberg_cli.utils.SocketServer;
+import iceberg_cli.security.PlainAuthenticator;
 
 import java.util.Arrays;
 
@@ -47,6 +48,8 @@ public class Main {
                 if (log != null)
                     log.error("Caused by: " + cause.getMessage());
             }
+        } finally {
+            PlainAuthenticator.cleanup();
         }
     }
 }
