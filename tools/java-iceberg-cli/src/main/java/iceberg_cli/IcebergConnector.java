@@ -633,19 +633,25 @@ public class IcebergConnector extends MetastoreConnector
             }
             builder.add(genericRecord.copy());
         }
-
-        S3FileIO io = initS3FileIO();
+        
+        S3FileIO io = null;
+        FileAppender<Record> appender = null;
+        try {
+        io = initS3FileIO();
         OutputFile location = io.newOutputFile(outputFile);
         System.out.println("New file created at: " + location);
                     
-        FileAppender<Record> appender;
         appender = Parquet.write(location)
                         .schema(schema)
                         .createWriterFunc(GenericParquetWriter::buildWriter)
                         .build();
         appender.addAll(builder.build());
-        io.close();
-        appender.close();
+        } finally {
+            if (io != null)
+                io.close();
+            if (appender != null)
+                appender.close();
+        }
         
         // Add file info to the JSON object
         JSONObject file = new JSONObject();
@@ -777,37 +783,41 @@ public class IcebergConnector extends MetastoreConnector
         
         System.out.println("Commiting to the Iceberg table");
         
-        S3FileIO io = initS3FileIO();
-        
-        JSONArray files = new JSONObject(dataFiles).getJSONArray("files");
-        Transaction transaction = iceberg_table.newTransaction();
-        AppendFiles append = transaction.newAppend();
-        // Commit data files
-        System.out.println("Starting Txn");
-        for (int index = 0; index < files.length(); ++index) {
-            JSONObject file = files.getJSONObject(index);
-            // Required
-            String filePath = file.getString("file_path");
-
-            // Optional (but slower if not given)
-            String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
-            Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
-            Long numRecords = getJsonLongOrDefault(file, "record_count", null);
+        S3FileIO io = null;
+        try {
+            io = initS3FileIO();
             
-            try {
+            JSONArray files = new JSONObject(dataFiles).getJSONArray("files");
+            Transaction transaction = iceberg_table.newTransaction();
+            AppendFiles append = transaction.newAppend();
+            // Commit data files
+            System.out.println("Starting Txn");
+            for (int index = 0; index < files.length(); ++index) {
+                JSONObject file = files.getJSONObject(index);
+                // Required
+                String filePath = file.getString("file_path");
+    
+                // Optional (but slower if not given)
+                String fileFormatStr = getJsonStringOrDefault(file, "file_format", null);
+                Long fileSize = getJsonLongOrDefault(file, "file_size_in_bytes", null);
+                Long numRecords = getJsonLongOrDefault(file, "record_count", null);
+                
                 append.appendFile(getDataFile(
                     io,
                     filePath,
                     fileFormatStr,
                     fileSize,
                     numRecords));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            } 
+            }
+            append.commit();
+            transaction.commitTransaction();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (io != null)
+                io.close();
         }
-        append.commit();
-        transaction.commitTransaction();
-        io.close();
+        
         System.out.println("Txn Complete!");
         
         return true;
@@ -819,27 +829,32 @@ public class IcebergConnector extends MetastoreConnector
         
         System.out.println("Rewriting files in the Iceberg table");
         
-        S3FileIO io = initS3FileIO();
-
+        S3FileIO io = null;
+        
         Set<DataFile> oldDataFiles = new HashSet<DataFile>();
         Set<DataFile> newDataFiles = new HashSet<DataFile>();
 
         try {
+            io = initS3FileIO();
+            
             oldDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_del"));
-            newDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_add"));
+            newDataFiles = getDataFileSet(io, new JSONObject(dataFiles).getJSONArray("files_to_add")); 
+
+            Transaction transaction = iceberg_table.newTransaction();
+            RewriteFiles rewrite = transaction.newRewrite();
+    
+            // Rewrite data files
+            System.out.println("Starting Txn");
+            rewrite.rewriteFiles(oldDataFiles, newDataFiles);
+            rewrite.commit();
+            transaction.commitTransaction();
         } catch (Exception e) {
-                throw new RuntimeException(e);
-        } 
-
-        Transaction transaction = iceberg_table.newTransaction();
-        RewriteFiles rewrite = transaction.newRewrite();
-
-        // Rewrite data files
-        System.out.println("Starting Txn");
-        rewrite.rewriteFiles(oldDataFiles, newDataFiles);
-        rewrite.commit();
-        transaction.commitTransaction();
-        io.close();
+            throw new RuntimeException(e);
+        } finally {
+            if (io != null)
+                io.close();
+        }
+        
         System.out.println("Txn Complete!");
 
         return true;

@@ -31,26 +31,9 @@ public class PlainAuthenticator {
         catalog.setConf(MetastoreConf.ConfVars.METASTORE_CLIENT_AUTH_MODE, authMode);
         catalog.setConf(MetastoreConf.ConfVars.EXECUTE_SET_UGI, "false");
         
-        String fileName = String.format("hms_auth_%s.%s", Thread.currentThread().getId(), JavaKeyStoreProvider.SCHEME_NAME);
+        String fileName = String.format("hms_auth.%s", JavaKeyStoreProvider.SCHEME_NAME);
         String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + dataDir + File.separator + fileName;
-        Configuration credConf = new Configuration();
-        credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
-        CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
-    
-        // Check if a credential entry exists for the provided username
-        CredentialEntry entry = provider.getCredentialEntry(username);
-        if (entry == null) {
-            provider.createCredentialEntry(username, password.toCharArray());
-            provider.flush();
-        } else if (!(String.valueOf(entry.getCredential()).equals(password))) {
-            // Check if the entry token is not the same as the provided token
-            // for a username then, recreate an entry. This can happen as a
-            // user can have multiple tokens.
-            provider.deleteCredentialEntry(username);
-            provider.createCredentialEntry(username, password.toCharArray());
-            provider.flush();
-        }
-        
+        validateCredFile(credUrl);
         catalog.setConf(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
     }
     
@@ -62,6 +45,26 @@ public class PlainAuthenticator {
             }
         }
     }
+    
+    private synchronized void validateCredFile(String credUrl) throws IOException {
+        Configuration credConf = new Configuration();
+        credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
+        CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
+   
+       // Check if a credential entry exists for the provided username
+       CredentialEntry entry = provider.getCredentialEntry(username);
+       if (entry == null) {
+           provider.createCredentialEntry(username, password.toCharArray());
+           provider.flush();
+       } else if (!(String.valueOf(entry.getCredential()).equals(password))) {
+           // Check if the entry token is not the same as the provided token
+           // for a username then, recreate an entry. This can happen as a
+           // user can have multiple tokens.
+           provider.deleteCredentialEntry(username);
+           provider.createCredentialEntry(username, password.toCharArray());
+           provider.flush();
+       }
+   }
     
     private void getCredentials() throws Exception {
         username = catalog.getConf(MetastoreConf.ConfVars.METASTORE_CLIENT_PLAIN_USERNAME);
@@ -75,5 +78,5 @@ public class PlainAuthenticator {
         // Validate password
         if (password == null)
             throw new Exception("Password is required for plain authentication");
-    } 
+    }
 }
