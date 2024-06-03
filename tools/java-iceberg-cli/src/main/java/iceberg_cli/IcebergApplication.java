@@ -202,7 +202,7 @@ public class IcebergApplication {
             System.err.println("Error: Invalid action");
             break;
         }
-        
+        connector.close();
         return output;
     }
     

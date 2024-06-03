@@ -41,6 +41,8 @@ public abstract class MetastoreConnector
     public MetastoreConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) {
     }
     
+    public void close() {}
+    
     public abstract void setTableIdentifier(String namespace, String tableName);
             
     public abstract void loadTable() throws Exception;
