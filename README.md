@@ -147,6 +147,11 @@ Positional Arguments:
   identifier           Table or namespace identifier
   schema               Create a table using this schema
 ```
+
+### Log File
+
+Log file name and path can be specified using -DLOG_FILE property. By default, the application will log to ./icebergcli_logs/iceberg_cli.log.
+
 ### Config File
 
 The toolkit allows users to specify catalog configuration using a config file. The file is expected to be named as .java_iceberg_cli.yaml and is searched in the following locations:
