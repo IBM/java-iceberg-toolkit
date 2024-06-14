@@ -83,6 +83,17 @@ public class CustomCatalog {
         this.properties = props;
         this.conf = conf;
     }
+    
+    public void updateUriAndWarehouse(String uri, String warehouse) {
+        if (uri != null) {
+            setConf(MetastoreConf.ConfVars.THRIFT_URIS, uri);
+            setProperty("uri", uri);
+        }
+        if (warehouse != null) {
+            setConf(MetastoreConf.ConfVars.WAREHOUSE, warehouse);
+            setProperty("warehouse", warehouse);
+        }
+    }
 
     public String getName() {
         return name;
