@@ -2,6 +2,7 @@ package iceberg_cli;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,7 @@ import java.util.UUID;
 
 import iceberg_cli.catalog.ConfigLoader;
 import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.security.PlainAuthenticator;
 import iceberg_cli.utils.AwsCredentials;
 import iceberg_cli.utils.Credentials;
 import iceberg_cli.utils.CliLogger;
@@ -237,5 +239,10 @@ class TestAlterTable {
         } finally {
             cleanup(catalog, namespace, tablename);
         }
+    }
+    
+    @AfterAll
+    static void clear() {
+        PlainAuthenticator.cleanup();
     }
 }
