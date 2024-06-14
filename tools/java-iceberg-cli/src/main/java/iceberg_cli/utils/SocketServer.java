@@ -138,11 +138,12 @@ public class SocketServer {
                 readSocketMessage(channel).ifPresent(message -> {
                     try {
                         String[] args = StringUtils.tokenizeQuotedString(message).toArray(new String[0]);
-                        log.info("Request: " + Arrays.toString(args));
+                        log.info(String.format("Request to thread %s : %s", Thread.currentThread().getId(), Arrays.toString(args)));
                         // Process client request
                         String response = new IcebergApplication().processRequest(args).trim();
                         // Send back response from the IcebergApplication to the client
                         sendMessage(channel, response, 0);
+                        log.info(String.format("Response sent by thread %s", Thread.currentThread().getId()));
                     } catch (Exception e) {
                         try {
                             // Send back error message to the Client
@@ -157,11 +158,13 @@ public class SocketServer {
                 });
             } catch (Exception e) {
                 System.err.println(e.getMessage());
+                log.error(e.getMessage());
             } finally {
                 try {
                     channel.close();
                 } catch (IOException e) {
                     System.err.println(e.getMessage());
+                    log.error(e.getMessage());
                 }
             }
         }
