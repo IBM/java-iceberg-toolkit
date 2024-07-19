@@ -201,15 +201,15 @@ public class CustomCatalog {
         for (String var : envVars.keySet()) {
             // Override value if already set
             try { 
-                if (var.startsWith(HADOOP_PREFIX)) {
-                    setConf(EnvVars.valueOf(var).hadoopConf, envVars.get(var));
-                } else if (var.startsWith(HIVE_PREFIX)) {
+                if (var.startsWith(HIVE_PREFIX)) {
                     setConf(EnvVars.valueOf(var).hiveConf, envVars.get(var));
                 } else if (var.startsWith(METASTORE_PREFIX)) {
                     setConf(EnvVars.valueOf(var).metaConf, envVars.get(var));
+                } else {
+                    setConf(EnvVars.valueOf(var).otherConf, envVars.get(var));
                 }
             } catch (IllegalArgumentException e) {
-                System.err.println("WARNING: Configuration value could not be set : " + var);
+             // Do nothing
             }
         }
     }

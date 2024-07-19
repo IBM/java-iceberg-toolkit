@@ -4,20 +4,28 @@
 
 package iceberg_cli;
 
-import java.util.*;
-import java.io.File;
+import iceberg_cli.utils.CliLogger;
+import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.utils.Credentials;
+import iceberg_cli.utils.DataConversion;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.iceberg.exceptions.NoSuchNamespaceException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.ExpressionParser;
-import org.apache.iceberg.hadoop.HadoopInputFile;
 import org.apache.iceberg.exceptions.NamespaceNotEmptyException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import com.google.common.collect.ImmutableList;
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.iceberg.AppendFiles;
 import org.apache.iceberg.CombinedScanTask;
 import org.apache.iceberg.DataFile;
@@ -42,7 +49,6 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.metrics.ScanMetrics;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.hive.HiveCatalog;
-import org.apache.iceberg.data.parquet.GenericParquetReaders;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.data.Record;
@@ -61,26 +67,13 @@ import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.SerializableSupplier;
 import org.apache.log4j.Logger;
-import org.apache.parquet.ParquetReadOptions;
-import org.apache.parquet.avro.AvroParquetReader;
-import org.apache.parquet.column.ParquetProperties;
-import org.apache.parquet.hadoop.Footer;
 import org.apache.parquet.hadoop.ParquetFileReader;
-import org.apache.parquet.hadoop.ParquetReader;
-import org.apache.parquet.hadoop.metadata.ParquetMetadata;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.parquet.io.InputFile;
 import org.apache.iceberg.TableMetadata;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.google.common.io.Files;
-
-import iceberg_cli.utils.CliLogger;
-import iceberg_cli.catalog.CustomCatalog;
-import iceberg_cli.utils.Credentials;
-import iceberg_cli.utils.DataConversion;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.http.SdkHttpClient;
@@ -88,6 +81,9 @@ import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+
+import static org.apache.iceberg.CatalogProperties.IO_MANIFEST_CACHE_ENABLED;
+import static org.apache.iceberg.CatalogProperties.IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS;
 
 public class IcebergConnector extends MetastoreConnector
 {
@@ -98,6 +94,11 @@ public class IcebergConnector extends MetastoreConnector
     TableScan m_scan;
 
     private static Logger log;
+    private final static String iceberg_version = "2";
+    private final static String IO_MANIFEST_CACHE_ENABLED_DEFAULT = "true";
+    // Cache entry expires only if it gets evicted due to memory pressure from IO_MANIFEST_CACHE_MAX_TOTAL_BYTES setting.
+    // Where, IO_MANIFEST_CACHE_MAX_TOTAL_BYTES_DEFAULT = 100 * 1024 * 1024
+    private final static String IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS_DEFAULT = "0";
 
     public IcebergConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws IOException {
         // TODO: Get type of catalog that the user wants and then initialize accordingly
@@ -128,6 +129,13 @@ public class IcebergConnector extends MetastoreConnector
             	// Set path style access for non-aws endpoints
             	conf.set("fs.s3a.path.style.access", "true");
             }
+        }
+        // Set manifest caching
+        if (conf.get(IO_MANIFEST_CACHE_ENABLED) == null) {
+            conf.set(IO_MANIFEST_CACHE_ENABLED, IO_MANIFEST_CACHE_ENABLED_DEFAULT);
+        }
+        if (conf.get(IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS) == null) {
+            conf.set(IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS, IO_MANIFEST_CACHE_EXPIRATION_INTERVAL_MS_DEFAULT);
         }
         m_catalog.setConf(conf);
         
@@ -218,11 +226,13 @@ public class IcebergConnector extends MetastoreConnector
             }
         }
         
-        System.out.println("Creating the table " + m_tableIdentifier);
-        log.info(String.format("Created table %s", m_tableIdentifier));
-        
-        m_catalog.createTable(m_tableIdentifier, schema, spec);
-        
+        System.out.println("Creating table " + m_tableIdentifier);
+        log.info(String.format("Creating table %s", m_tableIdentifier));
+
+        Map<String, String> props = new HashMap<String, String>();
+        props.put("format-version", iceberg_version);
+        m_catalog.createTable(m_tableIdentifier, schema, spec, props);
+                
         System.out.println("Table created successfully");
         log.info(String.format("Table %s created successfully", m_tableIdentifier));
         
