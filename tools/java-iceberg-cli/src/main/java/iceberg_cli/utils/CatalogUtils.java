@@ -19,21 +19,21 @@ public class CatalogUtils {
         if (table != null) {
             String tableType = hiveConn.getTableType(namespace, table).toUpperCase();
             try {
-                if (TableFormat.valueOf(tableType) == TableFormat.ICEBERG)
+                if (TableFormat.valueOf(tableType) == TableFormat.ICEBERG) {
+                    hiveConn.close();
                     return new IcebergConnector(catalog, namespace, table, creds);
+                }
             } catch (IllegalArgumentException e) {
                 return hiveConn;
             }
         }
-        
+        hiveConn.close();
         return new IcebergConnector(catalog, namespace, table, creds);
     }
     
-    public static MetastoreConnector getConnector(String catalogName, String format, String uri, String warehouse,
+    public static MetastoreConnector getConnector(CustomCatalog catalog, String format,
             String namespace, String table, Credentials creds) throws Exception {
         MetastoreConnector conn = null;
-        // Load catalog information
-        CustomCatalog catalog = new ConfigLoader().init(catalogName, uri, warehouse);
         
         // Auto detect format
         if (format == null) {

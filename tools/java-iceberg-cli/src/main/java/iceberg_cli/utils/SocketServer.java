@@ -5,12 +5,9 @@
 package iceberg_cli.utils;
 
 import iceberg_cli.IcebergApplication;
+import iceberg_cli.security.PlainAuthenticator;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileDescriptor;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.io.FileOutputStream;
 import java.net.StandardProtocolFamily;
 import java.net.UnixDomainSocketAddress;
 import java.nio.ByteBuffer;
@@ -26,6 +23,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
+
 /**
  * 
  * Creates a Unix domain socket server. For each connection,
@@ -37,25 +36,44 @@ public class SocketServer {
     private final String unixAddress = "/tmp/iceberg_service.server";
     private final ServerSocketChannel serverChannel;
     private final ExecutorService pool;
-    private final Integer minNumThreads = 10;
+    private final Integer numThreads;
+    
+    private static Logger log;
     
     /**
      * Create a serverChannel bound to the unixAddress path.
      * Create a pool of threads that can process multiple clients.
-     * @throws IOException
+     * @throws Exception
      */
-    public SocketServer() throws IOException {
+    public SocketServer() throws Exception {
+        log = CliLogger.getLogger();
+        
+        // Set minimum number of threads
+        int numProcessors = Runtime.getRuntime().availableProcessors();
+        if (numProcessors < 1)
+            throw new Exception("Number of available processors cannot be less than one");
+        else
+            numThreads = numProcessors;
+        
         UnixDomainSocketAddress socketAddress = UnixDomainSocketAddress.of(unixAddress);
         serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
         // Delete the file if it already exists
         Files.deleteIfExists(Path.of(unixAddress));
+        
+        PlainAuthenticator.cleanup();
+        
         // Bind to the socket Address
         serverChannel.bind(socketAddress);
         
         // Create a pool of fixed number of threads for handling the client connections
-        String s_numThreads = System.getenv("ICEBERG_TOOLKIT_NUM_THREADS");
-        int numThreads = (s_numThreads == null) ? minNumThreads : Integer.valueOf(s_numThreads);
-        pool = Executors.newFixedThreadPool(numThreads < minNumThreads ? minNumThreads : numThreads);
+        pool = Executors.newFixedThreadPool(numThreads);
+        
+        // Add termination hook
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                stopServer();
+            }
+        });
     }
     
     /**
@@ -86,11 +104,18 @@ public class SocketServer {
             if (!pool.awaitTermination(120, TimeUnit.SECONDS)) {
                 pool.shutdownNow();
             }
+            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+                System.err.println("Pool did not terminate");
+            }
             serverChannel.close();
+            Files.deleteIfExists(Path.of(unixAddress));
         } catch (IOException ioExp) {
             ioExp.getStackTrace();
         } catch (InterruptedException intrExp) {
             pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        } finally {
+            PlainAuthenticator.cleanup();
         }
         System.out.println(String.format("%s : Server stopped listening",
                 new Timestamp(System.currentTimeMillis())));
@@ -113,27 +138,33 @@ public class SocketServer {
                 readSocketMessage(channel).ifPresent(message -> {
                     try {
                         String[] args = StringUtils.tokenizeQuotedString(message).toArray(new String[0]);
+                        log.info(String.format("Request to thread %s : %s", Thread.currentThread().getId(), Arrays.toString(args)));
                         // Process client request
                         String response = new IcebergApplication().processRequest(args).trim();
                         // Send back response from the IcebergApplication to the client
                         sendMessage(channel, response, 0);
+                        log.info(String.format("Response sent by thread %s", Thread.currentThread().getId()));
                     } catch (Exception e) {
                         try {
                             // Send back error message to the Client
+                            log.error(e.getMessage());
                             sendMessage(channel, e.getMessage(), 1);
                         } catch (IOException ioExp) {
                             System.err.println(ioExp.getMessage());
+                            log.error(ioExp.getMessage());
                         }
                     }
                     return;
                 });
             } catch (Exception e) {
                 System.err.println(e.getMessage());
+                log.error(e.getMessage());
             } finally {
                 try {
                     channel.close();
                 } catch (IOException e) {
                     System.err.println(e.getMessage());
+                    log.error(e.getMessage());
                 }
             }
         }
@@ -146,6 +177,7 @@ public class SocketServer {
          */
         private Optional<String> readSocketMessage(SocketChannel channel) throws IOException {
             ByteBuffer buffer = ByteBuffer.allocate(MAX_BUF_LEN);
+            buffer.clear();
             int bytesRead = channel.read(buffer);
             if (bytesRead < 0)
                 return Optional.empty();

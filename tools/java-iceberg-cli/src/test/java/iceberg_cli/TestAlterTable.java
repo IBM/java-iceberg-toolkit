@@ -2,6 +2,7 @@ package iceberg_cli;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -24,8 +25,10 @@ import java.util.UUID;
 
 import iceberg_cli.catalog.ConfigLoader;
 import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.security.PlainAuthenticator;
 import iceberg_cli.utils.AwsCredentials;
 import iceberg_cli.utils.Credentials;
+import iceberg_cli.utils.CliLogger;
 
 class TestAlterTable {
     static String uri, warehouse, aws;
@@ -45,6 +48,8 @@ class TestAlterTable {
         }
         // Create a dummy credentials object instead which will be populated using env variables
         creds = new AwsCredentials(new JSONObject());
+        
+        CliLogger.setupLogging();
     }
 
     CustomCatalog createCatalog(String namespace, String tablename) {
@@ -70,6 +75,7 @@ class TestAlterTable {
             String dataFiles = con.writeTable(record, null);
             status = con.commitTable(dataFiles);
             Assertions.assertEquals(true, status);
+            con.close();
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }
@@ -85,6 +91,7 @@ class TestAlterTable {
             Namespace nmspc = Namespace.of(namespace);
             status = con.dropNamespace(nmspc);
             Assertions.assertEquals(true, status);
+            con.close();
         } catch (Exception e) {
             System.err.println("ERROR: " + e.getMessage());
         }
@@ -115,6 +122,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -147,6 +155,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -170,6 +179,7 @@ class TestAlterTable {
             con.loadTable(); // reload table after alter
             String newSchema = con.getTableSchema().toString().replaceAll("\\s+", " ");
             Assertions.assertEquals("table { 1: c1: required int 2: col2: optional string 3: c3: required double }", newSchema);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -202,6 +212,7 @@ class TestAlterTable {
             List<List<String>> actual = con.readTable();
             Collections.sort(actual, Comparator.comparing(list -> list.get(0)));
             Assertions.assertEquals(expected, actual);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
@@ -222,10 +233,16 @@ class TestAlterTable {
             String schema = "{\"add\":[{\"name\":\"c4\",\"type\":\"boolean\"}],\"rename\":[{\"name\":\"c2\",\"newName\":\"col2\"}],\"drop\":[\"c1\"]}";
             boolean status = con.alterTable(schema);
             Assertions.assertEquals(false, status);
+            con.close();
         } catch (Throwable t) {
             throw new ServletException("Error: " + t.getMessage(), t);
         } finally {
             cleanup(catalog, namespace, tablename);
         }
+    }
+    
+    @AfterAll
+    static void clear() {
+        PlainAuthenticator.cleanup();
     }
 }

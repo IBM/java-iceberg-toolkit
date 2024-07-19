@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import iceberg_cli.*;
 import iceberg_cli.catalog.ConfigLoader;
 import iceberg_cli.catalog.CustomCatalog;
+import iceberg_cli.security.PlainAuthenticator;
 import iceberg_cli.utils.AwsCredentials;
 import iceberg_cli.utils.Credentials;
 
@@ -256,6 +256,9 @@ class FunctionalTest {
             System.out.println("List of Failed Test Cases: " + failed_tests);
             
         }
+        
+        metaConn.close();
+        PlainAuthenticator.cleanup();
     }
     
 }
