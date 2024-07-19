@@ -2,6 +2,7 @@ package iceberg_cli.security;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
@@ -15,16 +16,17 @@ public class PlainAuthenticator {
     CustomCatalog catalog;
     String username;
     String password;
+    String keystore;
     private static final String authMode = "PLAIN";
     private static final String passwordEnvVar = "METASTORE_CLIENT_PLAIN_PASSWORD";
     private static final String passwordConfVar = "hive.metastore.client.plain.password";
-    private static final String testDataDir = System.getProperty("java.io.tmpdir") + File.separator + "JavaHmsClient";
+    private static final String dataDir = System.getProperty("java.io.tmpdir") + File.separator + "JavaHmsClient";
     
     public PlainAuthenticator(CustomCatalog catalog) throws Exception {
         this.catalog = catalog;
         getCredentials();
+        keystore = String.format("hms_auth_%s.%s", UUID.randomUUID().toString(), JavaKeyStoreProvider.SCHEME_NAME);
     }
-    
     
     public void login() throws IOException {
         catalog.setConf(MetastoreConf.ConfVars.USE_THRIFT_SASL, "false");
@@ -33,6 +35,15 @@ public class PlainAuthenticator {
         
         String credUrl = createCredFile();
         catalog.setConf(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
+    }
+    
+    public static void cleanup() {
+        File dir = new File(dataDir);
+        if (dir.exists()) {
+            for (String file : dir.list()) {
+                new File(dataDir, file).delete();
+            }
+        }
     }
     
     private void getCredentials() throws Exception {
@@ -50,17 +61,19 @@ public class PlainAuthenticator {
     }
     
     private String createCredFile() throws IOException {
-        String fileName = "hms_auth_" + username + "_" + password + "." + JavaKeyStoreProvider.SCHEME_NAME;
-        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + testDataDir + File.separator + fileName;
+        String credUrl = JavaKeyStoreProvider.SCHEME_NAME + "://file" + dataDir + File.separator + keystore;
         Configuration credConf = new Configuration();
         credConf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, credUrl);
         CredentialProvider provider = CredentialProviderFactory.getProviders(credConf).get(0);
+        
+        // Cleanup if keystore already exists
+        File file = new File(dataDir, keystore);
+        if (file.exists() && file.isFile())
+            file.delete();
     
-        // Check if the credential entry already exists
-        if (provider.getCredentialEntry(username) == null) {
-            provider.createCredentialEntry(username, password.toCharArray());
-            provider.flush();
-        }
+        // Create a credential entry for the provided username
+        provider.createCredentialEntry(username, password.toCharArray());
+        provider.flush();
     
         return credUrl;
     }

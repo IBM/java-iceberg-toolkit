@@ -4,7 +4,7 @@ import java.io.UnsupportedEncodingException;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.NamespaceNotEmptyException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
-import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.iceberg.hive.HiveClientPool;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Snapshot;
@@ -20,6 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
@@ -37,10 +38,12 @@ public class HiveConnector extends MetastoreConnector
 {
 
     Configuration conf;
-    HiveMetaStoreClient hiveClient;
+    HiveClientPool clients;
     String database;
     String table;
     Table hiveTable;
+    
+    private static final int DEFAULT_POOL_SIZE = 2;
     
     public HiveConnector(CustomCatalog catalog, String namespace, String tableName, Credentials creds) throws MetaException, IOException {
         super(catalog, namespace, tableName, creds);
@@ -61,18 +64,23 @@ public class HiveConnector extends MetastoreConnector
             }
         }
         
-        hiveClient = new HiveMetaStoreClient(conf);
+        clients = new HiveClientPool(DEFAULT_POOL_SIZE, conf);
         
         database = namespace;
         table = tableName;
     }
     
+    @Override
+    public void close() {
+        clients.close();
+    }
+    
     public void loadTable() throws Exception {
-        hiveTable = hiveClient.getTable(database, table);
+        hiveTable = clients.run(client -> client.getTable(database, table));
     }
     
     public Table loadTable(String database, String table) throws Exception {
-        return hiveClient.getTable(database, table);
+        return clients.run(client -> client.getTable(database, table));
     }
     
     public void setTableIdentifier(String namespace, String tableName) {
@@ -139,8 +147,8 @@ public class HiveConnector extends MetastoreConnector
     public Map<Integer, List<Map<String, String>>> getPlanFiles() throws IOException, URISyntaxException {
         org.apache.hadoop.hive.metastore.api.Table hiveTable;
          try {
-              hiveTable = hiveClient.getTable(database, table);
-         } catch (TException e) {
+              hiveTable = clients.run(client -> client.getTable(database, table));
+         } catch (TException | InterruptedException e) {
              System.err.println("Error loading Hive table: " + e.getMessage());
              return null;
          }
@@ -177,29 +185,33 @@ public class HiveConnector extends MetastoreConnector
     }
 
     @Override
-    public List<String> listTables(String namespace) throws MetaException {
-        return hiveClient.getAllTables(namespace);
+    public List<String> listTables(String namespace) throws TException, InterruptedException {
+        return clients.run(client -> client.getAllTables(namespace));
     }
     
     
     @Override
     public List<Namespace> listNamespaces() throws Exception {
-        return hiveClient.getAllDatabases().stream().map(Namespace::of).toList();
+        return clients.run(client -> client.getAllDatabases().stream().map(Namespace::of).toList());
     }
     
     @Override
     public java.util.Map<java.lang.String,java.lang.String> loadNamespaceMetadata(Namespace namespace) throws Exception {
         Map<String, String> metadata = new HashMap<String, String>();
-        metadata.put("location", hiveClient.getDatabase(namespace.toString()).getLocationUri());
+        metadata.put("location", clients.run(client -> client.getDatabase(namespace.toString()).getLocationUri()));
         return metadata;
     }
     
     @Override
     public boolean createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException {
         // Get warehouse path
-        String warehouse = hiveClient.getConfigValue(HiveConf.ConfVars.METASTOREWAREHOUSE.varname, null);
+        String warehouse = clients.run(client -> client.getConfigValue(HiveConf.ConfVars.METASTOREWAREHOUSE.varname, null));
         Database database = new Database(namespace.toString(), null, warehouse, new HashMap<String, String>());
-        hiveClient.createDatabase(database);
+        clients.run(
+                client -> {
+                    client.createDatabase(database);
+                    return null;
+                });
         System.out.println("Namespace " + namespace + " created");
         
         return true;
@@ -281,8 +293,8 @@ public class HiveConnector extends MetastoreConnector
     public Schema getTableSchema() {
         List<FieldSchema> schema;
         try {
-             schema = hiveClient.getSchema(database, table);
-        } catch (TException e) {
+             schema = clients.run(client -> client.getSchema(database, table));
+        } catch (TException | InterruptedException e) {
             return null;
         }
         return HiveSchemaUtil.convert(schema);

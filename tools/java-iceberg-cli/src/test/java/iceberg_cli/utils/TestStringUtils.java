@@ -31,6 +31,12 @@ public class TestStringUtils {
     public static Stream<Arguments> invalidParameters() {
         return Stream.of(
                 Arguments.of("a 'b c d"),
+                Arguments.of("-w \"/hive/warehouse\" -t \"Test table\" -n test -a write --record '{\"records\":[{\"c1\":8, \"c2\": \"The quick brown fox jumps over the lazy dog.\"}]}")
+                );
+    }
+    
+    public static Stream<Arguments> invalidWords() {
+        return Stream.of(
                 Arguments.of("a 'bc'e f"),
                 Arguments.of("-w \"/hive/warehouse\" -t \"Test table\" -n test -a write --record \"{\"records\":[{\"c1\":8, \"c2\": \"The quick brown fox jumps over the lazy dog.\"}]}\""),
                 Arguments.of("--record '{\"records\":[{\"c1\":8, \"c2\": \"The quick brown fox doesn\'t jump over the lazy dog.\"}]}'"),
@@ -68,7 +74,25 @@ public class TestStringUtils {
                 StringUtils.tokenizeQuotedString(input);
             });
             
-            String expectedMessage = "Invalid message string";
+            String expectedMessage = "Invalid request, found mismatched quotes";
+            String actualMessage = exception.getMessage();
+            
+            Assertions.assertEquals(expectedMessage, actualMessage);
+            
+        } catch (Throwable t) {
+            throw new ServletException("Error: " + t.getMessage(), t);
+        }
+    }
+    
+    @ParameterizedTest
+    @MethodSource("invalidWords")
+    public void testTokenizeQuotedStringForInvalidWords(String input) throws ServletException {
+        try {
+            Exception exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+                StringUtils.tokenizeQuotedString(input);
+            });
+            
+            String expectedMessage = "Invalid request, found closing quote before end of the space delimited word";
             String actualMessage = exception.getMessage();
             
             Assertions.assertEquals(expectedMessage, actualMessage);

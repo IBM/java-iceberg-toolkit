@@ -79,14 +79,7 @@ public class ConfigLoader {
         catalog.loadFromEnvironmentVariables();
 
         // Overwrite catalog configuration and properties, if specified by the user
-        if (uri != null) {
-            catalog.setConf(MetastoreConf.ConfVars.THRIFT_URIS, uri);
-            catalog.setProperty("uri", uri);
-        }
-        if (warehouse != null) {
-            catalog.setConf(MetastoreConf.ConfVars.WAREHOUSE, warehouse);
-            catalog.setProperty("warehouse", warehouse);
-        }
+        catalog.updateUriAndWarehouse(uri, warehouse);
         
         // Authenticate with Kerberos, if needed
         AuthProvider.isLoginNeeded(catalog);

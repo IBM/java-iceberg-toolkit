@@ -4,3 +4,4 @@ tools/java-iceberg-cli/target
 .classpath
 .project
 .settings
+**/icebergcli_logs
