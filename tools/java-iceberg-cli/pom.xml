@@ -7,40 +7,33 @@
     <description>Java Iceberg CLI</description>
   
     <properties>
-        <io.netty.version>4.1.100.Final</io.netty.version>
+        <io.netty.version>4.1.108.Final</io.netty.version>
         <org.apache.calcite.avatica.version>1.23.0</org.apache.calcite.avatica.version>
         <org.apache.logging.log4j.version>2.20.0</org.apache.logging.log4j.version>
-        <org.xerial.snappy.version>1.1.10.1</org.xerial.snappy.version>
+        <org.xerial.snappy.version>1.1.10.5</org.xerial.snappy.version>
         <de.ruedigermoeller.version>2.57</de.ruedigermoeller.version>
-        <com.fasterxml.jackson.version>2.15.3</com.fasterxml.jackson.version>
+        <com.fasterxml.jackson.version>2.16.0</com.fasterxml.jackson.version>
         <org.eclipse.jetty.version>11.0.18</org.eclipse.jetty.version>
-        <org.apache.iceberg.version>1.1.0</org.apache.iceberg.version>
-        <org.apache.hadoop.version>3.3.5</org.apache.hadoop.version>
+        <org.apache.iceberg.version>1.4.2</org.apache.iceberg.version>
+        <org.apache.hadoop.version>3.3.6</org.apache.hadoop.version>
         <org.apache.hive.version>4.0.0-alpha-2</org.apache.hive.version>
-        <ch.qos.logback.version>1.4.12</ch.qos.logback.version>
         <software.amazon.awssdk.version>2.17.272</software.amazon.awssdk.version>
         <org.junit.jupiter.version>5.8.1</org.junit.jupiter.version>
+        <org.apache.avro.version>1.11.3</org.apache.avro.version>
+        <org.apache.zookeeper.version>3.9.2</org.apache.zookeeper.version>
+        <org.apache.derby.version>10.17.1.0</org.apache.derby.version>
+        <ch.qos.logback.version>1.4.14</ch.qos.logback.version>
+        <com.jayway.jsonpath.version>2.9.0</com.jayway.jsonpath.version>
+        <org.jline.version>3.25.0</org.jline.version>
+        <org.apache.commons.version>1.26.0</org.apache.commons.version>
+        <org.apache.commons.configuration2.version>2.10.1</org.apache.commons.configuration2.version>
+        <com.nimbusds.version>9.37.3</com.nimbusds.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
 	
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-core</artifactId>
-                <version>${ch.qos.logback.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${ch.qos.logback.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.zookeeper</groupId>
-                <artifactId>zookeeper</artifactId>
-                <version>3.9.1</version>
-            </dependency>
             <dependency>
                 <groupId>org.apache.calcite.avatica</groupId>
                 <artifactId>avatica</artifactId>
@@ -169,7 +162,7 @@
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-core</artifactId>
-                <version>11.0.0-M6</version>
+                <version>11.0.0-M17</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
@@ -185,11 +178,6 @@
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
                 <version>2.4.9</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.ivy</groupId>
-                <artifactId>ivy</artifactId>
-                <version>2.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.ant</groupId>
@@ -255,11 +243,6 @@
                 <groupId>org.apache.parquet</groupId>
                 <artifactId>parquet-avro</artifactId>
                 <version>1.12.3</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.avro</groupId>
-                <artifactId>avro</artifactId>
-                <version>1.11.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
@@ -335,6 +318,56 @@
                 <groupId>org.apache.ivy</groupId>
                 <artifactId>ivy</artifactId>
                 <version>2.5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>${org.apache.avro.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>${org.apache.zookeeper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.derby</groupId>
+                <artifactId>derby</artifactId>
+                <version>${org.apache.derby.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${ch.qos.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${ch.qos.logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <version>${com.jayway.jsonpath.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+                <version>${org.jline.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${org.apache.commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>${com.nimbusds.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-configuration2</artifactId>
+                <version>${org.apache.commons.configuration2.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -558,12 +591,6 @@
             <version>${org.junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.derby</groupId>
-            <artifactId>derby</artifactId>
-            <version>10.16.1.1</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -586,6 +613,7 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>**/Log4j2Plugins.dat</exclude>
                                     </excludes>
                                 </filter>
                                 <filter>
