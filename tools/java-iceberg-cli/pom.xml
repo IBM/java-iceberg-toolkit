@@ -28,6 +28,7 @@
         <org.apache.commons.version>1.26.0</org.apache.commons.version>
         <org.apache.commons.configuration2.version>2.10.1</org.apache.commons.configuration2.version>
         <com.nimbusds.version>9.37.3</com.nimbusds.version>
+        <io.airlift.version>0.27</io.airlift.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
@@ -369,6 +370,12 @@
                 <artifactId>commons-configuration2</artifactId>
                 <version>${org.apache.commons.configuration2.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>aircompressor</artifactId>
+                <version>${io.airlift.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
     
