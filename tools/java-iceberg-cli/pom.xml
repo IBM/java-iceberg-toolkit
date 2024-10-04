@@ -29,6 +29,7 @@
         <org.apache.commons.configuration2.version>2.10.1</org.apache.commons.configuration2.version>
         <com.nimbusds.version>9.37.3</com.nimbusds.version>
         <dnsjava.version>3.6.0</dnsjava.version>
+        <io.airlift.version>0.27</io.airlift.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
@@ -374,6 +375,11 @@
                 <groupId>dnsjava</groupId>
                 <artifactId>dnsjava</artifactId>
                 <version>${dnsjava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>aircompressor</artifactId>
+                <version>${io.airlift.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
