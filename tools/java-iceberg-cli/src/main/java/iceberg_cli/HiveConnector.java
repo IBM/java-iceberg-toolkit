@@ -205,7 +205,7 @@ public class HiveConnector extends MetastoreConnector
     @Override
     public boolean createNamespace(Namespace namespace) throws Exception, AlreadyExistsException, UnsupportedOperationException {
         // Get warehouse path
-        String warehouse = clients.run(client -> client.getConfigValue(HiveConf.ConfVars.METASTORE_WAREHOUSE.varname, null));
+        String warehouse = clients.run(client -> client.getConfigValue(HiveConf.ConfVars.METASTOREWAREHOUSE.varname, null));
         Database database = new Database(namespace.toString(), null, warehouse, new HashMap<String, String>());
         clients.run(
                 client -> {
