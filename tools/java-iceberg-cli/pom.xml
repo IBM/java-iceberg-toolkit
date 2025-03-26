@@ -230,6 +230,12 @@
                 <groupId>org.apache.iceberg</groupId>
                 <artifactId>iceberg-arrow</artifactId>
                 <version>${org.apache.iceberg.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-common</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.iceberg</groupId>
@@ -296,7 +302,7 @@
             <dependency>
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-exec</artifactId>
-                <version>${org.apache.hive.version}</version>
+                <version>4.0.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
