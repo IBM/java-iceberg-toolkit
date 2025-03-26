@@ -14,10 +14,10 @@
         <de.ruedigermoeller.version>2.57</de.ruedigermoeller.version>
         <com.fasterxml.jackson.version>2.16.0</com.fasterxml.jackson.version>
         <org.eclipse.jetty.version>12.0.18</org.eclipse.jetty.version>
-        <org.apache.iceberg.version>1.8.1</org.apache.iceberg.version>
+        <org.apache.iceberg.version>1.4.2</org.apache.iceberg.version>
         <org.apache.hadoop.version>3.4.1</org.apache.hadoop.version>
-        <org.apache.hive.version>4.0.0-alpha-2</org.apache.hive.version>
-        <software.amazon.awssdk.version>2.17.272</software.amazon.awssdk.version>
+        <org.apache.hive.version>4.0.0-beta-1</org.apache.hive.version>
+        <software.amazon.awssdk.version>2.27.21</software.amazon.awssdk.version>
         <org.junit.jupiter.version>5.8.1</org.junit.jupiter.version>
         <org.apache.avro.version>1.11.4</org.apache.avro.version>
         <org.apache.zookeeper.version>3.9.2</org.apache.zookeeper.version>
