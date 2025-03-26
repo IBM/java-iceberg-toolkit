@@ -541,6 +541,10 @@
                      <groupId>org.apache.hadoop.thirdparty</groupId>
                      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
                  </exclusion>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-transport-native-epoll</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
