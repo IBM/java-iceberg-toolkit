@@ -1,0 +1,297 @@
+# ==============================================================================
+# GCP Netezza BYOC Infrastructure Configuration - EXAMPLE
+# ==============================================================================
+# Copy this file to terraform.tfvars and update with your actual values
+# DO NOT commit terraform.tfvars to version control
+
+# ------------------------------------------------------------------------------
+# Project and Region
+# ------------------------------------------------------------------------------
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+# ------------------------------------------------------------------------------
+# Dataplane Identification
+# ------------------------------------------------------------------------------
+dataplane_id = "dp-XXXX"
+
+# Optional: CRN for reference only (not used in GCP resource labels due to 63-char limit)
+dataplane_crn = "crn:v1:gcp-prod"
+
+byoc_engine_label = "netezza"
+
+# ------------------------------------------------------------------------------
+# Service Accounts
+# ------------------------------------------------------------------------------
+ops_service_account            = "ibm-byoc-dp-XXXX-ops@your-project.iam.gserviceaccount.com"
+pubsub_invoker_service_account = "ibm-byoc-dp-XXXX-ops@your-project.iam.gserviceaccount.com"
+send_dataplane_status_sa       = "ibm-byoc-dp-XXXX-ops@your-project.iam.gserviceaccount.com"
+# ==============================================================================
+# GKE CONFIGURATION
+# ==============================================================================
+
+gke_location                      = "us-central1"
+gke_subnet_key                    = "primary"
+gke_pods_secondary_range_name     = "gke-netezza-gcp-pods"
+gke_services_secondary_range_name = "gke-netezza-gcp-services"
+gke_release_channel               = null  # Disabled to allow autoUpgrade: false in nodepools
+gke_node_locations                = ["us-central1-a", "us-central1-b", "us-central1-c"]
+gke_datapath_provider             = "ADVANCED_DATAPATH"
+gke_enable_shielded_nodes         = true
+gke_enable_private_nodes          = true
+gke_enable_private_endpoint       = true
+gke_deletion_protection           = false
+gke_master_ipv4_cidr_block        = "172.16.0.64/28"
+gke_master_authorized_networks = [
+  # Your VPC subnet (nodes, internal access)
+  {
+    cidr_block   = "10.0.0.0/24"
+    display_name = "VPC Primary Subnet"
+  },
+
+  # Serverless VPC connector (Cloud Functions → GKE)
+  {
+    cidr_block   = "10.8.0.0/28"
+    display_name = "VPC Connector"
+  },
+  # GKE pods secondary range (for pod-to-master communication)
+  {
+    cidr_block   = "10.160.128.0/17"
+    display_name = "GKE Pods Range"
+  },
+
+  # GKE services secondary range
+  {
+    cidr_block   = "10.88.0.0/20"
+    display_name = "GKE Services Range"
+  }
+]
+
+# ==============================================================================
+# GKE DATABASE ENCRYPTION (CMEK)
+# ==============================================================================
+# Customer-Managed Encryption Key for GKE etcd database encryption
+# Set to null to use Google-managed encryption (default)
+# Format: projects/PROJECT_ID/locations/LOCATION/keyRings/RING_NAME/cryptoKeys/KEY_NAME
+
+gke_database_encryption_key_name = "projects/your-project/locations/us-central1/keyRings/your-keyring/cryptoKeys/your-key"
+
+gke_logging_components        = ["SYSTEM_COMPONENTS", "WORKLOADS"]
+gke_monitoring_components     = ["SYSTEM_COMPONENTS", "POD", "DEPLOYMENT", "STATEFULSET", "DAEMONSET"]
+gke_enable_managed_prometheus = true
+
+gke_enable_http_load_balancing            = true
+gke_enable_gce_persistent_disk_csi_driver = true
+gke_enable_gcp_filestore_csi_driver       = true
+gke_enable_dns_cache                      = true
+gke_enable_backup                         = true
+
+# ==============================================================================
+# GKE NODE AUTO-PROVISIONING (NAP)
+# ==============================================================================
+# Node Auto-Provisioning automatically creates and manages node pools based on
+# workload requirements. Disabled by default for cost control.
+# Enable in production for dynamic scaling based on pod resource requests.
+
+gke_enable_node_auto_provisioning = true
+
+# Zones where auto-provisioned nodes can be created
+gke_node_auto_provisioning_locations = ["us-central1-a", "us-central1-b", "us-central1-c"]
+
+# Autoscaling profile: BALANCED (default) or OPTIMIZE_UTILIZATION (more aggressive)
+gke_node_autoscaling_profile = "BALANCED"
+
+# Resource limits for auto-provisioned node pools (when NAP is enabled)
+gke_node_auto_provisioning_limits = {
+  cpu_min    = 2    # Minimum total CPUs across all auto-provisioned nodes
+  cpu_max    = 500  # Maximum total CPUs across all auto-provisioned nodes
+  memory_min = 4    # Minimum total memory (GB) across all auto-provisioned nodes
+  memory_max = 3000 # Maximum total memory (GB) across all auto-provisioned nodes
+}
+
+# Default configuration for auto-provisioned node pools
+gke_node_auto_provisioning_defaults = {
+  disk_size_gb       = 100
+  disk_type          = "pd-standard"
+  image_type         = "COS_CONTAINERD"
+  min_cpu_platform   = null    # e.g., "Intel Cascade Lake"
+  boot_disk_kms_key  = "projects/your-project/locations/us-central1/keyRings/your-keyring/cryptoKeys/your-key"    # KMS key for boot disk encryption
+  enable_secure_boot = true   # Secure boot for auto-provisioned nodes
+  max_surge          = 1       # Max nodes created during upgrade
+  max_unavailable    = 0       # Max nodes unavailable during upgrade
+  upgrade_strategy   = "SURGE" # SURGE or BLUE_GREEN
+}
+
+gke_default_node_pool = {
+  name               = "infra-pool"
+  initial_node_count = 1
+  min_node_count     = 1
+  max_node_count     = 3
+  max_pods_per_node  = 110
+  node_locations     = ["us-central1-a", "us-central1-b", "us-central1-c"]
+  version            = "1.34.4-gke.1193000"
+  auto_repair        = true
+  auto_upgrade       = false
+  service_account    = "your-service-account@your-project.iam.gserviceaccount.com"
+  machine_type       = "e2-standard-8"
+  disk_size_gb       = 250
+  disk_type          = "pd-standard"
+  image_type         = "COS_CONTAINERD"
+  oauth_scopes = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]
+  tags               = ["byoc"]
+  labels             = {}
+  spot               = false
+  enable_secure_boot = true
+  boot_disk_kms_key  = "projects/your-project/locations/us-central1/keyRings/your-keyring/cryptoKeys/your-key"
+}
+
+# ==============================================================================
+# GKE MAINTENANCE POLICY
+# ==============================================================================
+# Enable maintenance policy to control when cluster upgrades occur
+# This prevents unexpected upgrades during critical business hours
+
+gke_enable_maintenance_policy = true
+
+# Daily maintenance window - upgrades will only occur during this time
+# Duration is automatically set by GCP (typically 4 hours)
+gke_daily_maintenance_window = {
+  start_time = "03:00" # 3 AM UTC (8 PM PST / 7 PM PDT)
+}
+
+# Maintenance exclusions - periods when NO upgrades should occur
+# Using dynamic calculation: starts when code is executed, lasts 30 days
+gke_maintenance_exclusions = [
+  {
+    name       = "initial-deployment-freeze"
+    start_time = "dynamic"     # Will be calculated from current timestamp
+    end_time   = "dynamic"     # Will be calculated as start_time + duration_days
+    scope      = "NO_UPGRADES" # Block all upgrades during this period
+  }
+]
+
+# Set to true to dynamically calculate exclusion window from current time
+# When true, start_time = now, end_time = now + duration_days
+gke_use_dynamic_maintenance_window = true
+
+# Duration for dynamic maintenance exclusion (30 days from execution time)
+gke_maintenance_exclusion_duration_days = 30
+
+# ------------------------------------------------------------------------------
+# GCS Buckets and Source Paths
+# ------------------------------------------------------------------------------
+function_source_bucket = "ibm-byoc-dp-XXXX-tf"
+workflow_source_bucket = "ibm-byoc-dp-XXXX-tf"
+
+send_dataplane_status_source_object = "gcp/functions/send_dataplane_status.zip"
+kube_api_proxy_source_object        = "gcp/functions/kube_api_proxy.zip"
+install_operator_source_object      = "gcp/functions/install_operator.zip"
+get_operator_status_source_object   = "gcp/functions/get_operator_status.zip"
+common_serverless_source_object     = "gcp/functions/common_serverless.zip"
+
+cluster_setup_workflow_object        = "gcp/workflows/netezza_cluster_setup.yaml"
+delete_cluster_setup_workflow_object = "gcp/workflows/delete_cluster_setup.yaml"
+engine_deploy_workflow_object        = "gcp/workflows/netezza_engine_deploy.yaml"
+
+# ==============================================================================
+# REQUIRED VARIABLES - VPC Configuration
+# ==============================================================================
+# VPC network configuration based on test-vpc
+
+vpc_routing_mode = "REGIONAL"
+vpc_mtu          = 8896
+
+# Subnets configuration - BYOC GCP VPC
+#  if private_ip_google_access = true securily route traffic to gcp api's without any external IP
+vpc_subnets = {
+  primary = {
+    region                   = "us-central1"
+    ip_cidr_range            = "10.0.0.0/24"
+    private_ip_google_access = true
+    description              = "BYOC GCP primary subnet"
+    enable_flow_logs         = false
+    flow_logs_config = {
+      aggregation_interval = "INTERVAL_5_SEC"
+      flow_sampling        = 0.5
+      metadata             = "INCLUDE_ALL_METADATA"
+    }
+    secondary_ip_ranges = [
+      {
+        range_name    = "gke-netezza-gcp-pods"
+        ip_cidr_range = "10.160.128.0/17"
+      },
+      {
+        range_name    = "gke-netezza-gcp-services"
+        ip_cidr_range = "10.88.0.0/20"
+      }
+    ]
+  }
+}
+
+# Cloud NAT configuration
+# Disabled to avoid public internet egress from private GKE nodes.
+# Artifact Registry access is expected to work through Private Google Access.
+create_nat_gateway = false
+router_asn         = 64514
+nat_log_config = {
+  enable = true
+  filter = "ERRORS_ONLY"
+}
+
+# Firewall rules
+create_default_firewall_rules = true
+
+# ==============================================================================
+# REQUIRED VARIABLES - VPC Connector Configuration
+# ==============================================================================
+# VPC connector enables Cloud Functions to access private GKE clusters
+
+create_vpc_connector          = true
+vpc_connector_ip_cidr_range   = "10.8.0.0/28"
+vpc_connector_min_instances   = 2
+vpc_connector_max_instances   = 3
+vpc_connector_machine_type    = "e2-micro"
+vpc_connector_egress_settings = "ALL_TRAFFIC"
+# IF vpc_connector_egress_settings = "ALL_TRAFFIC" route all trsffic through vpc connect
+
+# ------------------------------------------------------------------------------
+# Cloud Functions
+# ------------------------------------------------------------------------------
+python_runtime           = "python311"
+function_memory_mb       = "512Mi"
+function_timeout_seconds = 540
+function_max_instances   = 10
+function_min_instances   = 0
+
+function_common_env_vars = {
+  LOG_LEVEL = "INFO"
+  REGION    = "us-central1"
+}
+
+send_dataplane_status_env_vars = {}
+kube_api_proxy_env_vars        = {}
+install_operator_env_vars      = {}
+get_operator_status_env_vars   = {}
+common_serverless_env_vars     = {}
+
+# ------------------------------------------------------------------------------
+# KMS / CMEK
+# ------------------------------------------------------------------------------
+workflows_kms_key = "projects/your-project/locations/us-central1/keyRings/your-keyring/cryptoKeys/your-key"
+
+# ------------------------------------------------------------------------------
+# Pub/Sub
+# ------------------------------------------------------------------------------
+input_queue_ack_deadline_seconds = 600
+max_delivery_attempts            = 5
+
+# ------------------------------------------------------------------------------
+# Artifact Registry
+# ------------------------------------------------------------------------------
+artifact_registry_enable_immutable_tags   = true
+artifact_registry_untagged_retention_days = 30
+artifact_registry_keep_versions           = 10
+artifact_registry_enable_scanning         = true

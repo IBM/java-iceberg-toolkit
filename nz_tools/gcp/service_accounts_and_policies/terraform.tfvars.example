@@ -1,0 +1,14 @@
+# ==============================================================================
+# Service Accounts and Policies - Terraform Variables - EXAMPLE
+# ==============================================================================
+# Copy this file to terraform.tfvars and update with your actual values
+# DO NOT commit terraform.tfvars to version control
+# ==============================================================================
+
+project_id                       = "your-gcp-project-id"
+region                           = "us-central1"
+dataplane_id                     = "dp-XXXX"
+dataplane_crn                    = "crn:v1:your-environment"
+byoc_engine_label                = "netezza"
+terraform_source_bucket          = "your-infrastructure-bucket"
+infra_manager_artifacts_bucket   = "your-artifact-bucket"
