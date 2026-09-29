@@ -12,7 +12,7 @@
         <org.apache.logging.log4j.version>2.20.0</org.apache.logging.log4j.version>
         <org.xerial.snappy.version>1.1.10.5</org.xerial.snappy.version>
         <de.ruedigermoeller.version>2.57</de.ruedigermoeller.version>
-        <com.fasterxml.jackson.version>2.16.0</com.fasterxml.jackson.version>
+        <com.fasterxml.jackson.version>2.18.10</com.fasterxml.jackson.version>
         <org.eclipse.jetty.version>12.0.18</org.eclipse.jetty.version>
         <org.apache.iceberg.version>1.4.2</org.apache.iceberg.version>
         <org.apache.hadoop.version>3.4.1</org.apache.hadoop.version>
